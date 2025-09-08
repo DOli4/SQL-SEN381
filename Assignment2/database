@@ -1,0 +1,84 @@
+-- Create Roles table
+CREATE TABLE Roles (
+    Role_ID INT PRIMARY KEY IDENTITY(1,1),
+    Name VARCHAR(10) NOT NULL,
+    Description VARCHAR(200)
+);
+
+-- Create User table
+CREATE TABLE [User] (
+    User_ID INT PRIMARY KEY IDENTITY(1,1),
+    Role_ID INT NOT NULL,
+    Username VARCHAR(30) NOT NULL UNIQUE,
+    First_Name VARCHAR(30),
+    Last_Name VARCHAR(30),
+    Phone VARCHAR(15),
+    Email VARCHAR(50) UNIQUE,
+    Credentials VARCHAR(100),
+    DOB DATE,
+    Password VARCHAR(128) NOT NULL,
+    Status VARCHAR(10),
+    Created_On DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (Role_ID) REFERENCES Roles(Role_ID)
+);
+
+-- Create Modules table
+CREATE TABLE Modules (
+    Module_ID INT PRIMARY KEY IDENTITY(1,1),
+    Name VARCHAR(10) NOT NULL,
+    Description VARCHAR(200)
+);
+
+-- Create Topic table
+CREATE TABLE Topic (
+    Topic_ID INT PRIMARY KEY IDENTITY(1,1),
+    User_ID INT NOT NULL,
+    Module_ID INT NOT NULL,
+    Title VARCHAR(500) NOT NULL,
+    Description VARCHAR(8000),
+    Content VARCHAR(300),
+    Upvotes INT DEFAULT 0,
+    Downvotes INT DEFAULT 0,
+    FOREIGN KEY (User_ID) REFERENCES [User](User_ID),
+    FOREIGN KEY (Module_ID) REFERENCES Modules(Module_ID)
+);
+
+-- Create Reply table
+CREATE TABLE Reply (
+    Reply_ID INT PRIMARY KEY IDENTITY(1,1),
+    Topic_ID INT NOT NULL,
+    Parent_Reply_ID INT NULL,
+    User_ID INT NOT NULL,
+    Description VARCHAR(8000),
+    Content VARCHAR(300),
+    FOREIGN KEY (Topic_ID) REFERENCES Topic(Topic_ID),
+    FOREIGN KEY (Parent_Reply_ID) REFERENCES Reply(Reply_ID),
+    FOREIGN KEY (User_ID) REFERENCES [User](User_ID)
+);
+
+-- Create UserModule table (junction table for many-to-many relationship)
+CREATE TABLE UserModule (
+    Module_ID INT NOT NULL,
+    User_ID INT NOT NULL,
+    PRIMARY KEY (Module_ID, User_ID),
+    FOREIGN KEY (Module_ID) REFERENCES Modules(Module_ID),
+    FOREIGN KEY (User_ID) REFERENCES [User](User_ID)
+);
+
+-- Create TopicSubscriber table
+CREATE TABLE TopicSubscriber (
+    Topic_ID INT NOT NULL,
+    User_ID INT NOT NULL,
+    PRIMARY KEY (Topic_ID, User_ID),
+    FOREIGN KEY (Topic_ID) REFERENCES Topic(Topic_ID),
+    FOREIGN KEY (User_ID) REFERENCES [User](User_ID)
+);
+
+-- Create TutorSubscriber table
+CREATE TABLE TutorSubscriber (
+    Tutor_ID INT NOT NULL,
+    Student_ID INT NOT NULL,
+    PRIMARY KEY (Tutor_ID, Student_ID),
+    FOREIGN KEY (Tutor_ID) REFERENCES [User](User_ID),
+    FOREIGN KEY (Student_ID) REFERENCES [User](User_ID)
+);
