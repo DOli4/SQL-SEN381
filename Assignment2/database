@@ -36,7 +36,6 @@ CREATE TABLE Topic (
     Module_ID INT NOT NULL,
     Title VARCHAR(500) NOT NULL,
     Description VARCHAR(8000),
-    Content VARCHAR(300),
     Upvotes INT DEFAULT 0,
     Downvotes INT DEFAULT 0,
     FOREIGN KEY (User_ID) REFERENCES [User](User_ID),
@@ -50,13 +49,24 @@ CREATE TABLE Reply (
     Parent_Reply_ID INT NULL,
     User_ID INT NOT NULL,
     Description VARCHAR(8000),
-    Content VARCHAR(300),
+    Upvote INT DEFAULT 0,
+    Downvote INT DEFAULT 0,
     FOREIGN KEY (Topic_ID) REFERENCES Topic(Topic_ID),
     FOREIGN KEY (Parent_Reply_ID) REFERENCES Reply(Reply_ID),
     FOREIGN KEY (User_ID) REFERENCES [User](User_ID)
 );
 
--- Create UserModule table (junction table for many-to-many relationship)
+-- Create Content table
+CREATE TABLE Content (
+    Content_ID INT PRIMARY KEY IDENTITY(1,1),
+    Reply_ID INT NULL,
+    Topic_ID INT NULL,
+    Path VARCHAR(300) NOT NULL,
+    FOREIGN KEY (Reply_ID) REFERENCES Reply(Reply_ID),
+    FOREIGN KEY (Topic_ID) REFERENCES Topic(Topic_ID)
+);
+
+-- Create UserModule table
 CREATE TABLE UserModule (
     Module_ID INT NOT NULL,
     User_ID INT NOT NULL,
