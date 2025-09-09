@@ -1,0 +1,1 @@
+SELECT Role_ID, Name, Description FROM dbo.Roles;

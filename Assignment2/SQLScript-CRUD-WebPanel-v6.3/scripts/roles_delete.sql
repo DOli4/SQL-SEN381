@@ -1,0 +1,1 @@
+DELETE FROM dbo.Roles WHERE Role_ID=$(RoleID); SELECT @@ROWCOUNT AS rowsAffected;
