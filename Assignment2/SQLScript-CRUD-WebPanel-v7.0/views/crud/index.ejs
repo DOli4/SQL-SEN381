@@ -1,10 +1,13 @@
+<% /* Header: title and link to switch to the SQL scripts editor panel */ %>
 <div class="d-flex align-items-center justify-content-between mb-3">
   <h2 class="m-0">Quick CRUD</h2>
   <a class="btn btn-outline-secondary" href="/panel">Scripts mode</a>
 </div>
 
+<% /* Wizard step: choose operation and target table, then proceed to the detail form */ %>
 <form method="post" action="/crud/build" class="card p-3 shadow-sm">
   <div class="row g-3">
+    <% /* CRUD operation selector (View/Insert/Update/Delete) */ %>
     <div class="col-md-4">
       <label class="form-label">Operation</label>
       <select name="op" class="form-select" required>
@@ -14,6 +17,8 @@
         <option value="delete">Delete</option>
       </select>
     </div>
+
+    <% /* Table selector: options come from the server-provided whitelist `tables` */ %>
     <div class="col-md-8">
       <label class="form-label">Table</label>
       <select name="table" class="form-select" required>
@@ -23,7 +28,10 @@
       </select>
     </div>
   </div>
+
+  <% /* Submit advances to /crud/build which renders the appropriate form for the chosen op/table */ %>
   <div class="mt-3">
     <button class="btn btn-primary">Next</button>
   </div>
 </form>
+

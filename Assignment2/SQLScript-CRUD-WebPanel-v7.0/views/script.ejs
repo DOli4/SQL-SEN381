@@ -1,33 +1,35 @@
+<% /* Header: show current script name and provide navigation back to the scripts list */ %>
 <div class="mb-3 d-flex align-items-center justify-content-between">
   <h2 class="m-0">Editing: <span class="fw-semibold"><%= name %></span></h2>
   <a class="btn btn-outline-secondary" href="/panel">Back</a>
 </div>
+
+<% /* Editor form: submits to /run by default; secondary button posts to /save only */ %>
 <form method="post" action="/script/<%= encodeURIComponent(name) %>/run" class="row g-4">
   <div class="col-lg-8">
     <div class="card shadow-sm">
       <div class="card-header bg-white"><strong>SQL</strong></div>
       <div class="card-body p-0">
+        <% /* SQL text area: raw script contents; monospace via .code-area, large height for readability */ %>
         <textarea name="sql" class="form-control code-area" rows="20" spellcheck="false"><%= content %></textarea>
       </div>
     </div>
   </div>
+
   <div class="col-lg-4">
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-white d-flex align-items-center justify-content-between">
-        <strong>Variables</strong><small class="text-muted">key=value per line</small>
-      </div>
-      <div class="card-body p-0">
-        <textarea name="vars" class="form-control vars-area" rows="8" placeholder="RoleName=STUDENT&#10;RoleDesc=Student role"></textarea>
-        <div class="form-text px-3 py-2">Use in SQL as <code>$(RoleName)</code>.</div>
-      </div>
-    </div>
+    <% /* Primary actions:
+         - Run: executes the current editor contents (and persists if route chooses to save-before-run)
+         - Save only: persists without execution by overriding form action/method */ %>
     <div class="d-flex gap-2">
       <button class="btn btn-primary flex-fill">Run</button>
       <button formaction="/script/<%= encodeURIComponent(name) %>/save" formmethod="post" class="btn btn-secondary">Save only</button>
     </div>
+
+    <% /* Output panel: shows stdout/stderr or driver messages returned by the server route */ %>
     <div class="card shadow-sm mt-4">
       <div class="card-header bg-white">Output</div>
       <pre class="output-area m-0 p-3"><%= output || '' %></pre>
     </div>
   </div>
 </form>
+

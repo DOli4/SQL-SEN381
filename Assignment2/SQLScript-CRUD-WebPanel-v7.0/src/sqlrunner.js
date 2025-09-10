@@ -1,4 +1,29 @@
 // src/sqlrunner.js (ESM)
+// Purpose:
+//   Thin wrapper around `sqlcmd` to execute SQL Server commands safely from Node.
+//   - Reads connection settings from environment variables at call time (not at import time).
+//   - Supports Windows or SQL authentication, TCP/LPC/NP transports, TLS encryption and trust options.
+//   - Provides three execution modes:
+//       * runSqlText   : run ad-hoc SQL and return raw stdout
+//       * runSqlFile   : run a .sql file with optional :setvar variables
+//       * runJson      : run a SELECT ... FOR JSON ... and return parsed JSON
+//   - Includes a quick connection probe (2s) before each call to fail fast on connectivity issues.
+//   - Cleans typical `sqlcmd` noise and tolerantly extracts JSON.
+// Environment variables:
+//   SQLCMD_PATH           : optional path to sqlcmd (default "sqlcmd")
+//   SQL_SERVER            : e.g., "tcp:100.94.59.10,1433" | "lpc:." | "np:\\\\.\\pipe\\sql\\query"
+//   SQL_DB                : database name (default "master")
+//   SQL_AUTH              : "windows" or "sql" (default "windows")
+//   SQL_USER              : SQL login (when SQL_AUTH=sql)
+//   SQL_PASS              : SQL password (when SQL_AUTH=sql)
+//   SQL_ENCRYPT           : "true" to request encryption (-N), else false
+//   SQL_TRUST_CERT        : "true" to trust server cert (-C), else false
+//   SQLCMD_LOGIN_SECONDS  : login timeout in seconds (default 10; probe uses 2s)
+//   SQLCMD_TIMEOUT_MS     : hard kill timeout for the child process (default 120000)
+//
+// Notes:
+//   - DEBUG_SQL=1 prints the effective `sqlcmd` arguments (password is masked).
+
 import path from "node:path";
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
@@ -30,12 +55,14 @@ function makeBaseArgs({ shortLogin = false } = {}) {
   const c = cfg();
   const args = [];
 
+  // Authentication flags
   if (c.auth === "windows") {
     args.push("-E");
   } else {
     args.push("-U", c.user, "-P", c.pass);
   }
 
+  // Common options for non-truncated output, error propagation, and timeouts
   args.push(
     "-S", c.server,
     "-d", c.db,
@@ -47,6 +74,7 @@ function makeBaseArgs({ shortLogin = false } = {}) {
     "-Y", "0"
   );
 
+  // TLS flags if requested
   if (c.encrypt) {
     args.push("-N");
   }
@@ -57,6 +85,8 @@ function makeBaseArgs({ shortLogin = false } = {}) {
   return args;
 }
 
+// Spawn a `sqlcmd` child process with the constructed arguments.
+// Applies a hard timeout (procTimeoutMs) to avoid hanging requests.
 function runSqlcmd(extraArgs, { shortLogin = false } = {}) {
   const c = cfg();
 
@@ -80,6 +110,7 @@ function runSqlcmd(extraArgs, { shortLogin = false } = {}) {
       }
     };
 
+    // Hard kill timer for the child process
     const t = setTimeout(() => {
       try {
         cp.kill("SIGKILL");
@@ -112,6 +143,7 @@ function runSqlcmd(extraArgs, { shortLogin = false } = {}) {
 
 /* ---------- helpers ---------- */
 
+// Build a :setvar header from key/value pairs for use at the top of a temp script.
 function buildSetvars(vars = {}) {
   const lines = [];
   for (const [k, v] of Object.entries(vars)) {
@@ -125,6 +157,7 @@ function buildSetvars(vars = {}) {
   }
 }
 
+// Remove `sqlcmd` noise (newlines, BOM, "(n rows affected)") prior to JSON extraction.
 function cleanJsonText(buf) {
   return buf
     .replace(/\r?\n/g, "") // unwrap line breaks
@@ -133,10 +166,11 @@ function cleanJsonText(buf) {
     .trim();
 }
 
-/** Tolerant JSON extractor: handles headers, missing ']', glued objects. */
+/** Tolerant JSON extractor: handles headers, missing closing bracket, or concatenated objects. */
 function extractJson(rawText) {
   const t = cleanJsonText(rawText);
 
+  // Prefer array detection
   const a = t.indexOf("[");
   const az = t.lastIndexOf("]");
   if (a !== -1) {
@@ -147,6 +181,7 @@ function extractJson(rawText) {
     }
   }
 
+  // Fallback to object detection and glue correction ("}{")
   const o = t.indexOf("{");
   const oz = t.lastIndexOf("}");
   if (o !== -1 && oz > o) {
@@ -160,7 +195,7 @@ function extractJson(rawText) {
   return "[]";
 }
 
-// Quick 2s probe using the exact same flags
+// Quick 2s probe using the exact same flags to fail fast when connectivity is broken.
 async function probe() {
   const { stderr, code } = await runSqlcmd(
     ["-Q", "SET NOCOUNT ON; SELECT 1 AS ok;"],
@@ -173,6 +208,7 @@ async function probe() {
 
 /* ---------- public API ---------- */
 
+// Run a .sql file with optional :setvar variables. Returns raw stdout text.
 export async function runSqlFile(filePath, vars = {}) {
   await probe();
 
@@ -181,7 +217,7 @@ export async function runSqlFile(filePath, vars = {}) {
     `wrap_${Date.now()}_${Math.random().toString(36).slice(2)}.sql`
   );
   const script = `${buildSetvars(vars)}SET NOCOUNT ON;\n:r "${filePath.replace(/"/g, '""')}"\n`;
-  await fs.writeFile(wrapper, script, "utf8");
+  await fs.writeFile(wrapper, "utf8");
 
   try {
     const { stdout, stderr, code } = await runSqlcmd(["-i", wrapper]);
@@ -198,6 +234,7 @@ export async function runSqlFile(filePath, vars = {}) {
   }
 }
 
+// Run ad-hoc SQL text by writing to a temp script and executing it through sqlcmd. Returns raw stdout.
 export async function runSqlText(sqlText, vars = {}) {
   await probe();
 
@@ -206,7 +243,7 @@ export async function runSqlText(sqlText, vars = {}) {
     `sql_${Date.now()}_${Math.random().toString(36).slice(2)}.sql`
   );
   const script = `${buildSetvars(vars)}SET NOCOUNT ON;\n${sqlText}\n`;
-  await fs.writeFile(tmp, script, "utf8");
+  await fs.writeFile(tmp, "utf8");
 
   try {
     const { stdout, stderr, code } = await runSqlcmd(["-i", tmp]);
@@ -223,6 +260,8 @@ export async function runSqlText(sqlText, vars = {}) {
   }
 }
 
+// Run a SELECT ... FOR JSON ... query and parse the resulting JSON.
+// If the caller did not include FOR JSON, it is appended automatically using PATH + INCLUDE_NULL_VALUES.
 export async function runJson(sqlText, vars = {}) {
   await probe();
 
@@ -240,7 +279,7 @@ export async function runJson(sqlText, vars = {}) {
     `json_${Date.now()}_${Math.random().toString(36).slice(2)}.out`
   );
   const script = `${buildSetvars(vars)}SET NOCOUNT ON;\n${body};\n`;
-  await fs.writeFile(sqlFile, script, "utf8");
+  await fs.writeFile(sqlFile, "utf8");
 
   try {
     const { stderr, code } = await runSqlcmd(["-i", sqlFile, "-o", outFile]);
@@ -286,3 +325,4 @@ export async function runJson(sqlText, vars = {}) {
     }
   }
 }
+

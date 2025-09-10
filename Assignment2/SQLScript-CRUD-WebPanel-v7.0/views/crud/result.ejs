@@ -1,13 +1,16 @@
+<% /* Header: show operation and target table label; Back returns to CRUD selector */ %>
 <div class="mb-3 d-flex align-items-center justify-content-between">
   <h2 class="m-0 text-capitalize"><%= op %> — <code><%= pretty || (schema + '.' + table) %></code></h2>
   <a class="btn btn-outline-secondary" href="/crud">Back</a>
 </div>
 
+<% /* Always display the exact SQL that was executed for transparency/debugging */ %>
 <div class="card shadow-sm">
   <div class="card-header bg-white">Executed SQL</div>
   <pre class="m-0 p-3 output-area"><%= sql %></pre>
 </div>
 
+<% /* If the handler provided a JSON array of rows (SELECT/VIEW), render a table */ %>
 <% if (rows && rows.length) { %>
   <div class="card shadow-sm mt-3">
     <div class="card-header bg-white d-flex align-items-center justify-content-between">
@@ -18,12 +21,14 @@
       <table class="table table-sm table-striped table-hover m-0">
         <thead>
           <tr>
+            <% /* Derive column list from the first row’s keys */ %>
             <% const cols = Object.keys(rows[0]); cols.forEach(c => { %>
               <th><%= c %></th>
             <% }) %>
           </tr>
         </thead>
         <tbody>
+          <% /* Print each row; null/undefined shows as empty cell for readability */ %>
           <% rows.forEach(r => { %>
             <tr>
               <% cols.forEach(c => { %>
@@ -36,6 +41,7 @@
     </div>
   </div>
 <% } else { %>
+  <% /* Non-SELECT operations (INSERT/UPDATE/DELETE) or errors: show raw output area */ %>
   <div class="card shadow-sm mt-3">
     <div class="card-header bg-white d-flex align-items-center justify-content-between">
       <span>Output</span>
@@ -44,3 +50,4 @@
     <pre class="m-0 p-3 output-area"><%= output || '' %></pre>
   </div>
 <% } %>
+
