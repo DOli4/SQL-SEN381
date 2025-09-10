@@ -1,94 +1,153 @@
--- Create Roles table
-CREATE TABLE Roles (
-    Role_ID INT PRIMARY KEY IDENTITY(1,1),
-    Name VARCHAR(10) NOT NULL,
-    Description VARCHAR(200)
-);
+/* ------------------------------------------------------------------
+   Clean rebuild of forum schema (safe to re-run)
+   ------------------------------------------------------------------ */
+USE [master];
+GO
 
--- Create User table
-CREATE TABLE [User] (
-    User_ID INT PRIMARY KEY IDENTITY(1,1),
-    Role_ID INT NOT NULL,
-    Username VARCHAR(30) NOT NULL UNIQUE,
-    First_Name VARCHAR(30),
-    Last_Name VARCHAR(30),
-    Phone VARCHAR(15),
-    Email VARCHAR(50) UNIQUE,
-    Credentials VARCHAR(100),
-    DOB DATE,
-    Password VARCHAR(128) NOT NULL,
-    Status VARCHAR(10),
-    Created_On DATETIME DEFAULT GETDATE(),
-    FOREIGN KEY (Role_ID) REFERENCES Roles(Role_ID)
-);
+/* Drop in child→parent order (ignore if missing) */
+IF OBJECT_ID('dbo.Content',         'U') IS NOT NULL DROP TABLE dbo.Content;
+IF OBJECT_ID('dbo.Reply',           'U') IS NOT NULL DROP TABLE dbo.Reply;
+IF OBJECT_ID('dbo.TopicSubscriber', 'U') IS NOT NULL DROP TABLE dbo.TopicSubscriber;
+IF OBJECT_ID('dbo.TutorSubscriber', 'U') IS NOT NULL DROP TABLE dbo.TutorSubscriber;
+IF OBJECT_ID('dbo.UserModule',      'U') IS NOT NULL DROP TABLE dbo.UserModule;
+IF OBJECT_ID('dbo.Topic',           'U') IS NOT NULL DROP TABLE dbo.Topic;
+IF OBJECT_ID('dbo.[User]',          'U') IS NOT NULL DROP TABLE dbo.[User];
+IF OBJECT_ID('dbo.Modules',         'U') IS NOT NULL DROP TABLE dbo.Modules;
+IF OBJECT_ID('dbo.Roles',           'U') IS NOT NULL DROP TABLE dbo.Roles;
+GO
 
--- Create Modules table
-CREATE TABLE Modules (
-    Module_ID INT PRIMARY KEY IDENTITY(1,1),
-    Name VARCHAR(10) NOT NULL,
-    Description VARCHAR(200)
+/* ------------------------- Roles ------------------------- */
+CREATE TABLE dbo.Roles
+(
+    Role_ID     INT IDENTITY(1,1) PRIMARY KEY,
+    [Name]      VARCHAR(10)   NOT NULL,
+    [Description] VARCHAR(200) NULL
 );
+GO
 
--- Create Topic table
-CREATE TABLE Topic (
-    Topic_ID INT PRIMARY KEY IDENTITY(1,1),
-    User_ID INT NOT NULL,
-    Module_ID INT NOT NULL,
-    Title VARCHAR(500) NOT NULL,
-    Description VARCHAR(8000),
-    Upvotes INT DEFAULT 0,
-    Downvotes INT DEFAULT 0,
-    FOREIGN KEY (User_ID) REFERENCES [User](User_ID),
-    FOREIGN KEY (Module_ID) REFERENCES Modules(Module_ID)
+/* -------------------------- User ------------------------- */
+CREATE TABLE dbo.[User]
+(
+    User_ID     INT IDENTITY(1,1) PRIMARY KEY,
+    Role_ID     INT         NOT NULL,
+    Username    VARCHAR(30) NOT NULL UNIQUE,
+    First_Name  VARCHAR(30) NULL,
+    Last_Name   VARCHAR(30) NULL,
+    Phone       VARCHAR(15) NULL,
+    Email       VARCHAR(50) NULL UNIQUE,
+    Credentials VARCHAR(100) NULL,
+    DOB         DATE        NULL,
+    [Password]  VARCHAR(128) NOT NULL,
+    [Status]    VARCHAR(10)  NULL,
+    Created_On  DATETIME     NOT NULL DEFAULT (GETDATE()),
+    CONSTRAINT FK_User_Role
+        FOREIGN KEY (Role_ID) REFERENCES dbo.Roles(Role_ID)
 );
+GO
 
--- Create Reply table
-CREATE TABLE Reply (
-    Reply_ID INT PRIMARY KEY IDENTITY(1,1),
-    Topic_ID INT NOT NULL,
+/* ------------------------ Modules ------------------------ */
+CREATE TABLE dbo.Modules
+(
+    Module_ID   INT IDENTITY(1,1) PRIMARY KEY,
+    [Name]      VARCHAR(10)   NOT NULL,
+    [Description] VARCHAR(200) NULL
+);
+GO
+
+/* ------------------------- Topic ------------------------- */
+CREATE TABLE dbo.Topic
+(
+    Topic_ID    INT IDENTITY(1,1) PRIMARY KEY,
+    User_ID     INT NOT NULL,
+    Module_ID   INT NOT NULL,
+    Title       VARCHAR(500)  NOT NULL,
+    [Description] VARCHAR(MAX) NULL,   -- “20k” → use MAX
+    Upvotes     INT NOT NULL DEFAULT(0),
+    Downvotes   INT NOT NULL DEFAULT(0),
+    CONSTRAINT FK_Topic_User
+        FOREIGN KEY (User_ID)   REFERENCES dbo.[User](User_ID),
+    CONSTRAINT FK_Topic_Module
+        FOREIGN KEY (Module_ID) REFERENCES dbo.Modules(Module_ID)
+);
+GO
+
+/* ------------------------- Reply ------------------------- */
+CREATE TABLE dbo.Reply
+(
+    Reply_ID        INT IDENTITY(1,1) PRIMARY KEY,
+    Topic_ID        INT NOT NULL,
     Parent_Reply_ID INT NULL,
-    User_ID INT NOT NULL,
-    Description VARCHAR(8000),
-    Upvote INT DEFAULT 0,
-    Downvote INT DEFAULT 0,
-    FOREIGN KEY (Topic_ID) REFERENCES Topic(Topic_ID),
-    FOREIGN KEY (Parent_Reply_ID) REFERENCES Reply(Reply_ID),
-    FOREIGN KEY (User_ID) REFERENCES [User](User_ID)
+    User_ID         INT NOT NULL,
+    [Description]   VARCHAR(MAX) NULL,  -- “15k” → use MAX
+    Upvote          INT NOT NULL DEFAULT(0),
+    Downvote        INT NOT NULL DEFAULT(0),
+    CONSTRAINT FK_Reply_Topic
+        FOREIGN KEY (Topic_ID)        REFERENCES dbo.Topic(Topic_ID),
+    CONSTRAINT FK_Reply_Parent
+        FOREIGN KEY (Parent_Reply_ID) REFERENCES dbo.Reply(Reply_ID),
+    CONSTRAINT FK_Reply_User
+        FOREIGN KEY (User_ID)         REFERENCES dbo.[User](User_ID)
 );
+GO
 
--- Create Content table
-CREATE TABLE Content (
-    Content_ID INT PRIMARY KEY IDENTITY(1,1),
-    Reply_ID INT NULL,
-    Topic_ID INT NULL,
-    Path VARCHAR(300) NOT NULL,
-    FOREIGN KEY (Reply_ID) REFERENCES Reply(Reply_ID),
-    FOREIGN KEY (Topic_ID) REFERENCES Topic(Topic_ID)
+/* ------------------------ Content ------------------------ */
+CREATE TABLE dbo.Content
+(
+    Content_ID  INT IDENTITY(1,1) PRIMARY KEY,
+    Reply_ID    INT NULL,
+    Topic_ID    INT NULL,
+    [Path]      VARCHAR(300) NOT NULL,
+    CONSTRAINT FK_Content_Reply FOREIGN KEY (Reply_ID) REFERENCES dbo.Reply(Reply_ID),
+    CONSTRAINT FK_Content_Topic FOREIGN KEY (Topic_ID) REFERENCES dbo.Topic(Topic_ID),
+    -- ensure at least one association exists
+    CONSTRAINT CK_Content_AtLeastOneRef CHECK (Reply_ID IS NOT NULL OR Topic_ID IS NOT NULL)
 );
+GO
 
--- Create UserModule table
-CREATE TABLE UserModule (
+/* ---------------------- UserModule ----------------------- */
+CREATE TABLE dbo.UserModule
+(
     Module_ID INT NOT NULL,
-    User_ID INT NOT NULL,
-    PRIMARY KEY (Module_ID, User_ID),
-    FOREIGN KEY (Module_ID) REFERENCES Modules(Module_ID),
-    FOREIGN KEY (User_ID) REFERENCES [User](User_ID)
+    User_ID   INT NOT NULL,
+    CONSTRAINT PK_UserModule PRIMARY KEY (Module_ID, User_ID),
+    CONSTRAINT FK_UserModule_Module FOREIGN KEY (Module_ID) REFERENCES dbo.Modules(Module_ID),
+    CONSTRAINT FK_UserModule_User   FOREIGN KEY (User_ID)   REFERENCES dbo.[User](User_ID)
 );
+GO
 
--- Create TopicSubscriber table
-CREATE TABLE TopicSubscriber (
+/* -------------------- TopicSubscriber -------------------- */
+CREATE TABLE dbo.TopicSubscriber
+(
     Topic_ID INT NOT NULL,
-    User_ID INT NOT NULL,
-    PRIMARY KEY (Topic_ID, User_ID),
-    FOREIGN KEY (Topic_ID) REFERENCES Topic(Topic_ID),
-    FOREIGN KEY (User_ID) REFERENCES [User](User_ID)
+    User_ID  INT NOT NULL,
+    CONSTRAINT PK_TopicSubscriber PRIMARY KEY (Topic_ID, User_ID),
+    CONSTRAINT FK_TopicSubscriber_Topic FOREIGN KEY (Topic_ID) REFERENCES dbo.Topic(Topic_ID),
+    CONSTRAINT FK_TopicSubscriber_User  FOREIGN KEY (User_ID)  REFERENCES dbo.[User](User_ID)
 );
+GO
 
--- Create TutorSubscriber table
-CREATE TABLE TutorSubscriber (
-    Tutor_ID INT NOT NULL,
+/* -------------------- TutorSubscriber -------------------- */
+CREATE TABLE dbo.TutorSubscriber
+(
+    Tutor_ID   INT NOT NULL,
     Student_ID INT NOT NULL,
-    PRIMARY KEY (Tutor_ID, Student_ID),
-    FOREIGN KEY (Tutor_ID) REFERENCES [User](User_ID),
-    FOREIGN KEY (Student_ID) REFERENCES [User](User_ID)
+    CONSTRAINT PK_TutorSubscriber PRIMARY KEY (Tutor_ID, Student_ID),
+    CONSTRAINT FK_TutorSubscriber_Tutor   FOREIGN KEY (Tutor_ID)   REFERENCES dbo.[User](User_ID),
+    CONSTRAINT FK_TutorSubscriber_Student FOREIGN KEY (Student_ID) REFERENCES dbo.[User](User_ID),
+    CONSTRAINT CK_TutorStudent_NotEqual CHECK (Tutor_ID <> Student_ID)
 );
+GO
+
+/* -------- Helpful indexes on foreign keys (performance) -- */
+CREATE INDEX IX_User_Role               ON dbo.[User](Role_ID);
+CREATE INDEX IX_Topic_User              ON dbo.Topic(User_ID);
+CREATE INDEX IX_Topic_Module            ON dbo.Topic(Module_ID);
+CREATE INDEX IX_Reply_Topic             ON dbo.Reply(Topic_ID);
+CREATE INDEX IX_Reply_Parent            ON dbo.Reply(Parent_Reply_ID);
+CREATE INDEX IX_Reply_User              ON dbo.Reply(User_ID);
+CREATE INDEX IX_Content_Reply           ON dbo.Content(Reply_ID);
+CREATE INDEX IX_Content_Topic           ON dbo.Content(Topic_ID);
+CREATE INDEX IX_UserModule_User         ON dbo.UserModule(User_ID);
+CREATE INDEX IX_TopicSubscriber_User    ON dbo.TopicSubscriber(User_ID);
+CREATE INDEX IX_TutorSubscriber_Student ON dbo.TutorSubscriber(Student_ID);
+GO

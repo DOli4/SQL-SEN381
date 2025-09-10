@@ -13,6 +13,7 @@ const TABLES = [
   { fq: 'dbo.Modules',           pretty: 'Modules' },
   { fq: 'dbo.Topic',             pretty: 'Topics' },
   { fq: 'dbo.Reply',             pretty: 'Replies' },
+  { fq: 'dbo.Content',           pretty: 'Content' },          // NEW
   { fq: 'dbo.UserModule',        pretty: 'User Modules' },
   { fq: 'dbo.TopicSubscriber',   pretty: 'Topic Subscribers' },
   { fq: 'dbo.TutorSubscriber',   pretty: 'Tutor Subscribers' }
@@ -22,28 +23,40 @@ const TABLES = [
 // Each entry defines the lookup table, key column, display label, and optional role filter.
 const FK = {
   'dbo.[User]': {
-    Role_ID: { table: 'dbo.Roles', key:'Role_ID', label:'Name' }
+    Role_ID: { table: 'dbo.Roles', key: 'Role_ID', label: 'Name' }
   },
+
   'dbo.Topic': {
-    User_ID:   { table: 'dbo.[User]', key:'User_ID', label:'Username' },
-    Module_ID: { table: 'dbo.Modules', key:'Module_ID', label:'Name' }
+    User_ID:   { table: 'dbo.[User]',  key: 'User_ID',   label: 'Username' },
+    Module_ID: { table: 'dbo.Modules', key: 'Module_ID', label: 'Name' }
   },
+
   'dbo.Reply': {
-    Topic_ID:        { table: 'dbo.Topic', key:'Topic_ID', label:'Title' },
-    Parent_Reply_ID: { table: 'dbo.Reply', key:'Reply_ID', label:'Reply_ID' },
-    User_ID:         { table: 'dbo.[User]', key:'User_ID', label:'Username' }
+    Topic_ID:        { table: 'dbo.Topic', key: 'Topic_ID', label: 'Title' },
+    Parent_Reply_ID: { table: 'dbo.Reply', key: 'Reply_ID', label: 'Reply_ID' },
+    User_ID:         { table: 'dbo.[User]', key: 'User_ID', label: 'Username' }
   },
+
+  // NEW: Content can reference either a Reply or a Topic
+  'dbo.Content': {
+    Reply_ID: { table: 'dbo.Reply', key: 'Reply_ID', label: 'Reply_ID' },
+    Topic_ID: { table: 'dbo.Topic', key: 'Topic_ID', label: 'Title' }
+  },
+
   'dbo.UserModule': {
-    Module_ID: { table: 'dbo.Modules', key:'Module_ID', label:'Name' },
-    User_ID:   { table: 'dbo.[User]',  key:'User_ID',   label:'Username' }
+    Module_ID: { table: 'dbo.Modules', key: 'Module_ID', label: 'Name' },
+    User_ID:   { table: 'dbo.[User]',  key: 'User_ID',   label: 'Username' }
   },
+
   'dbo.TopicSubscriber': {
-    Topic_ID: { table: 'dbo.Topic', key:'Topic_ID', label:'Title' },
-    User_ID:  { table: 'dbo.[User]', key:'User_ID', label:'Username' }
+    Topic_ID: { table: 'dbo.Topic',  key: 'Topic_ID', label: 'Title' },
+    User_ID:  { table: 'dbo.[User]', key: 'User_ID',  label: 'Username' }
   },
+
+  // Role-filtered user lookups preserved
   'dbo.TutorSubscriber': {
-    Tutor_ID:   { table: 'dbo.[User]', key:'User_ID', label:'Username', role: 'TUTOR' },
-    Student_ID: { table: 'dbo.[User]', key:'User_ID', label:'Username', role: 'STUDENT' }
+    Tutor_ID:   { table: 'dbo.[User]', key: 'User_ID', label: 'Username', role: 'TUTOR' },
+    Student_ID: { table: 'dbo.[User]', key: 'User_ID', label: 'Username', role: 'STUDENT' }
   }
 };
 
@@ -237,4 +250,3 @@ router.post('/crud/run', async (req, res) => {
 });
 
 export default router;
-

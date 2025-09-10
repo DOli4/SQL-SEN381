@@ -1,3 +1,17 @@
+```ejs
+<% /* ================================================================
+     View: CRUD landing page
+     Purpose:
+       - Let the user choose a CRUD operation (view/insert/update/delete)
+         and the target table from a predefined whitelist.
+       - Posts to /crud/build which renders the operation-specific form.
+     Notes:
+       - The "tables" array is provided by the server route and contains:
+           { fq: 'schema.[Table]', pretty: 'Human name' }
+       - Keep option values (op, table) unchanged; the server relies on
+         these exact field names to build SQL safely.
+     ================================================================= */ %>
+
 <% /* Header: title and link to switch to the SQL scripts editor panel */ %>
 <div class="d-flex align-items-center justify-content-between mb-3">
   <h2 class="m-0">Quick CRUD</h2>
@@ -16,6 +30,9 @@
         <option value="update">Update</option>
         <option value="delete">Delete</option>
       </select>
+      <% /* Implementation detail:
+           - "op" is consumed by /crud/build to decide which form fields to render.
+           - Do not localize option values; only the labels may be changed. */ %>
     </div>
 
     <% /* Table selector: options come from the server-provided whitelist `tables` */ %>
@@ -26,6 +43,10 @@
           <option value="<%= t.fq %>"><%= t.pretty %></option>
         <% }) %>
       </select>
+      <% /* Implementation detail:
+           - Option value is the fully qualified table name (schema + bracketed table).
+           - The server parses this to look up column metadata and keys.
+           - Keep the name="table" attribute unchanged. */ %>
     </div>
   </div>
 
@@ -34,4 +55,4 @@
     <button class="btn btn-primary">Next</button>
   </div>
 </form>
-
+```
