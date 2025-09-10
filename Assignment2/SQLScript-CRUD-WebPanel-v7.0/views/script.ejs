@@ -2,7 +2,6 @@
   <h2 class="m-0">Editing: <span class="fw-semibold"><%= name %></span></h2>
   <a class="btn btn-outline-secondary" href="/panel">Back</a>
 </div>
-
 <form method="post" action="/script/<%= encodeURIComponent(name) %>/run" class="row g-4">
   <div class="col-lg-8">
     <div class="card shadow-sm">
@@ -18,7 +17,7 @@
         <strong>Variables</strong><small class="text-muted">key=value per line</small>
       </div>
       <div class="card-body p-0">
-        <textarea name="vars" class="form-control vars-area" rows="8" placeholder="RoleName=STUDENT&#10;RoleDesc=Student role"><%= varsText %></textarea>
+        <textarea name="vars" class="form-control vars-area" rows="8" placeholder="RoleName=STUDENT&#10;RoleDesc=Student role"></textarea>
         <div class="form-text px-3 py-2">Use in SQL as <code>$(RoleName)</code>.</div>
       </div>
     </div>
@@ -27,7 +26,7 @@
       <button formaction="/script/<%= encodeURIComponent(name) %>/save" formmethod="post" class="btn btn-secondary">Save only</button>
     </div>
     <div class="card shadow-sm mt-4">
-      <div class="card-header bg-white">Output <% if (isError) { %><span class="badge text-bg-danger">Error</span><% } %></div>
+      <div class="card-header bg-white">Output</div>
       <pre class="output-area m-0 p-3"><%= output || '' %></pre>
     </div>
   </div>

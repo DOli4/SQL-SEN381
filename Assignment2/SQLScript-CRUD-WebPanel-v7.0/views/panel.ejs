@@ -2,11 +2,6 @@
   <h2 class="m-0">Scripts</h2>
   <a class="btn btn-outline-secondary" href="/crud">Back to CRUD</a>
 </div>
-
-<% if (typeof error !== 'undefined' && error) { %>
-  <div class="alert alert-danger"><%= error %></div>
-<% } %>
-
 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
   <% (files || []).forEach(f => { %>
     <div class="col">
@@ -21,7 +16,6 @@
     </div>
   <% }) %>
 </div>
-
 <% if (!files || files.length === 0) { %>
   <div class="alert alert-info mt-3">No .sql files found. Add scripts to the <code><%= process.env.SCRIPTS_DIR || 'scripts' %></code> folder.</div>
 <% } %>

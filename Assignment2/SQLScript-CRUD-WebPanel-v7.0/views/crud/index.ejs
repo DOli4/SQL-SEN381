@@ -18,7 +18,7 @@
       <label class="form-label">Table</label>
       <select name="table" class="form-select" required>
         <% tables.forEach(t => { %>
-          <option value="<%= t.schema %>.<%= t.table %>"><%= t.schema %>.<%= t.table %></option>
+          <option value="<%= t.fq %>"><%= t.pretty %></option>
         <% }) %>
       </select>
     </div>

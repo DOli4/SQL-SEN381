@@ -1,5 +1,5 @@
 <div class="mb-3 d-flex align-items-center justify-content-between">
-  <h2 class="m-0 text-capitalize"><%= op %> — <code><%= schema %>.<%= table %></code></h2>
+  <h2 class="m-0 text-capitalize"><%= op %> — <code><%= pretty %></code></h2>
   <a class="btn btn-outline-secondary" href="/crud">Back</a>
 </div>
 
@@ -7,6 +7,8 @@
   <input type="hidden" name="op" value="<%= op %>">
   <input type="hidden" name="schema" value="<%= schema %>">
   <input type="hidden" name="table" value="<%= table %>">
+  <input type="hidden" name="tableFq" value="<%= tableFq %>">
+  <input type="hidden" name="pretty" value="<%= pretty %>">
   <input type="hidden" name="columnsJson" value='<%- JSON.stringify(columns) %>'>
   <input type="hidden" name="pkJson" value='<%- JSON.stringify(pk) %>'>
 
@@ -33,7 +35,16 @@
       <% columns.forEach(c => { if (c.isIdentity === 1) return; %>
         <div class="col-md-4">
           <label class="form-label"><%= c.name %> <small class="text-muted">(<%= c.dataType %><%= c.maxLen ? ','+c.maxLen : '' %><%= c.isNullable==='YES' ? ', NULL' : '' %>)</small></label>
-          <input class="form-control" name="col_<%= c.name %>" placeholder="<%= c.isNullable==='YES' ? 'optional' : '' %>">
+          <% if (fkOptions && fkOptions[c.name]) { %>
+            <select class="form-select" name="col_<%= c.name %>">
+              <option value="">(select)</option>
+              <% fkOptions[c.name].forEach(o => { %>
+                <option value="<%= o.value %>"><%= o.label %> (ID=<%= o.value %>)</option>
+              <% }) %>
+            </select>
+          <% } else { %>
+            <input class="form-control" name="col_<%= c.name %>" placeholder="<%= c.isNullable==='YES' ? 'optional' : '' %>">
+          <% } %>
         </div>
       <% }) %>
     </div>
@@ -42,7 +53,7 @@
   <% if (op === 'update') { %>
     <div class="alert alert-secondary">Provide <strong>primary key</strong> to locate the row, then set columns to update.</div>
     <div class="row g-3">
-      <% pk.forEach(p => { const c = columns.find(x => x.name === p.name); %>
+      <% pk.forEach(p => { %>
         <div class="col-md-4">
           <label class="form-label">PK: <%= p.name %></label>
           <input class="form-control" name="pk_<%= p.name %>" required>
@@ -54,7 +65,16 @@
       <% columns.forEach(c => { if (pk.some(p => p.name === c.name) || c.isIdentity===1) return; %>
         <div class="col-md-4">
           <label class="form-label"><%= c.name %> <small class="text-muted">(<%= c.dataType %>)</small></label>
-          <input class="form-control" name="col_<%= c.name %>" placeholder="leave blank to skip">
+          <% if (fkOptions && fkOptions[c.name]) { %>
+            <select class="form-select" name="col_<%= c.name %>">
+              <option value="">(leave blank to skip)</option>
+              <% fkOptions[c.name].forEach(o => { %>
+                <option value="<%= o.value %>"><%= o.label %> (ID=<%= o.value %>)</option>
+              <% }) %>
+            </select>
+          <% } else { %>
+            <input class="form-control" name="col_<%= c.name %>" placeholder="leave blank to skip">
+          <% } %>
         </div>
       <% }) %>
     </div>
@@ -63,7 +83,7 @@
   <% if (op === 'delete') { %>
     <div class="alert alert-warning">This will delete the row matching the <strong>primary key</strong> values.</div>
     <div class="row g-3">
-      <% pk.forEach(p => { const c = columns.find(x => x.name === p.name); %>
+      <% pk.forEach(p => { %>
         <div class="col-md-4">
           <label class="form-label">PK: <%= p.name %></label>
           <input class="form-control" name="pk_<%= p.name %>" required>
