@@ -1,13 +1,34 @@
+<% /* =====================================================================
+     View: scripts.ejs
+     Purpose:
+       - Display a responsive, card-based list of .sql files discovered by
+         the server under SCRIPTS_DIR (default: ./scripts).
+       - Provide a per-file action to open the editor page to view/edit/run.
+     Data contract (from route):
+       - files: string[] | undefined — file names (with .sql extension)
+     Notes:
+       - Uses Bootstrap grid utilities for responsive layout.
+       - The "Edit & Run" link navigates to /script/:name.
+       - When there are no files, an informational empty state is shown.
+     ===================================================================== */ %>
+
+<% /* Header: page title and link to return to the CRUD dashboard */ %>
 <div class="d-flex align-items-center justify-content-between mb-3">
   <h2 class="m-0">Scripts</h2>
   <a class="btn btn-outline-secondary" href="/crud">Back to CRUD</a>
 </div>
+
+<% /* Script list: responsive card grid for all discovered .sql files
+       - row-cols-* classes define the number of columns at each breakpoint
+       - g-3 adds uniform gutter spacing between cards                       */ %>
 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
   <% (files || []).forEach(f => { %>
     <div class="col">
       <div class="card shadow-sm h-100">
         <div class="card-body d-flex flex-column">
+          <% /* File name used as the card title; consider truncation with CSS if names may be long */ %>
           <h5 class="card-title"><%= f %></h5>
+          <% /* Push the action button to the bottom for equal-height cards */ %>
           <div class="mt-auto">
             <a class="btn btn-primary" href="/script/<%= encodeURIComponent(f) %>">Edit & Run</a>
           </div>
@@ -16,6 +37,12 @@
     </div>
   <% }) %>
 </div>
+
+<% /* Empty state: guidance when no .sql files are present in SCRIPTS_DIR
+       - Uses process.env.SCRIPTS_DIR when provided, else displays 'scripts'  */ %>
 <% if (!files || files.length === 0) { %>
-  <div class="alert alert-info mt-3">No .sql files found. Add scripts to the <code><%= process.env.SCRIPTS_DIR || 'scripts' %></code> folder.</div>
+  <div class="alert alert-info mt-3">
+    No .sql files found. Add scripts to the
+    <code><%= process.env.SCRIPTS_DIR || 'scripts' %></code> folder.
+  </div>
 <% } %>

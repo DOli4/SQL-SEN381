@@ -1,29 +1,57 @@
+<% /* ======================================================================
+     View: CRUD execution result
+     Purpose:
+       - Display the exact SQL that was executed.
+       - Show either a tabular result set (for SELECT/view) or a plain
+         output panel (for INSERT/UPDATE/DELETE or when an error occurred).
+     Inputs (from controller):
+       - op      : string ('view' | 'insert' | 'update' | 'delete')
+       - schema  : schema name
+       - table   : table name
+       - pretty  : friendly table label
+       - sql     : the statement that was executed
+       - rows    : array of row objects (present for SELECT/view)
+       - output  : raw stdout text from sqlcmd (for non-SELECT or errors)
+       - error   : truthy when the operation failed
+     Notes:
+       - Keep the structure and variable names unchanged; other templates
+         and the controller logic depend on them.
+     ====================================================================== */ %>
+
+<% /* Header: show operation and target table label; Back returns to CRUD selector */ %>
 <div class="mb-3 d-flex align-items-center justify-content-between">
   <h2 class="m-0 text-capitalize"><%= op %> — <code><%= pretty || (schema + '.' + table) %></code></h2>
   <a class="btn btn-outline-secondary" href="/crud">Back</a>
 </div>
 
+<% /* Always display the exact SQL that was executed for transparency/debugging */ %>
 <div class="card shadow-sm">
   <div class="card-header bg-white">Executed SQL</div>
   <pre class="m-0 p-3 output-area"><%= sql %></pre>
 </div>
 
+<% /* If the handler provided a JSON array of rows (SELECT/VIEW), render a table */ %>
 <% if (rows && rows.length) { %>
   <div class="card shadow-sm mt-3">
     <div class="card-header bg-white d-flex align-items-center justify-content-between">
       <span>Results</span>
       <span class="badge text-bg-success">OK</span>
     </div>
+
+    <% /* Responsive table: small striped variant for readability */ %>
     <div class="table-responsive">
       <table class="table table-sm table-striped table-hover m-0">
         <thead>
           <tr>
+            <% /* Derive column list from the first row’s keys.
+                 Assumes all rows have the same shape. */ %>
             <% const cols = Object.keys(rows[0]); cols.forEach(c => { %>
               <th><%= c %></th>
             <% }) %>
           </tr>
         </thead>
         <tbody>
+          <% /* Render each row; null/undefined prints as an empty cell. */ %>
           <% rows.forEach(r => { %>
             <tr>
               <% cols.forEach(c => { %>
@@ -35,11 +63,19 @@
       </table>
     </div>
   </div>
+
 <% } else { %>
+  <% /* Non-SELECT path or error state:
+       - Show a labeled output panel.
+       - Badge color reflects success or error. */ %>
   <div class="card shadow-sm mt-3">
     <div class="card-header bg-white d-flex align-items-center justify-content-between">
       <span>Output</span>
-      <% if (error) { %><span class="badge text-bg-danger">Error</span><% } else { %><span class="badge text-bg-success">OK</span><% } %>
+      <% if (error) { %>
+        <span class="badge text-bg-danger">Error</span>
+      <% } else { %>
+        <span class="badge text-bg-success">OK</span>
+      <% } %>
     </div>
     <pre class="m-0 p-3 output-area"><%= output || '' %></pre>
   </div>

@@ -1,4 +1,26 @@
 // src/sqlrunner.js (ESM)
+// Purpose:
+//   Minimal wrapper around the `sqlcmd` CLI to execute SQL Server work from Node.
+//   - Reads connection settings from environment variables.
+//   - Supports Windows or SQL authentication.
+//   - Exposes three entry points:
+//       * runSqlText : run ad-hoc SQL (returns raw stdout)
+//       * runSqlFile : run a .sql file with optional :setvar variables (returns raw stdout)
+//       * runJson    : run a SELECT ... FOR JSON ... and return parsed JSON
+//   - Uses wide output and no truncation to keep JSON intact.
+//   - Applies a hard process timeout to prevent hanging requests.
+//
+// Environment variables:
+//   SQLCMD_PATH        : optional path to sqlcmd (default "sqlcmd")
+//   SQL_SERVER         : server/instance, e.g. "lpc:.", "tcp:HOST,1433", "np:\\\\.\\pipe\\sql\\query"
+//   SQL_DB             : database name (default "master")
+//   SQL_AUTH           : "windows" | "sql" (default "windows")
+//   SQL_USER / SQL_PASS: credentials when SQL_AUTH="sql"
+//   SQLCMD_TIMEOUT_MS  : child process kill timeout in ms (default 30000)
+// Notes:
+//   - DEBUG_SQL=1 will print the effective sqlcmd arguments (including credentials).
+//   - Do not combine `-h -1` with `-y/-Y`: we use `-y 0 -Y 0` to disable truncation.
+
 import path from "node:path";
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
@@ -15,26 +37,29 @@ const TIMEOUT = Number(process.env.SQLCMD_TIMEOUT_MS || 30000);
 /* ---------- low-level runner ---------- */
 
 function makeBaseArgs() {
-  // IMPORTANT: remove -h -1, add -y 0 -Y 0 to avoid truncation
+  // Build common sqlcmd flags for non-truncated, single-line friendly output.
+  // IMPORTANT: do not use -h -1 together with -y/-Y (they are mutually exclusive).
+  // Here we use -y 0 and -Y 0 to disable max column length limits entirely.
   const args = [];
   if (AUTH === "windows") args.push("-E");
   else args.push("-U", USER, "-P", PASS);
 
   args.push(
-    "-S", SERVER,
-    "-d", DB,
-    "-l", "30",    // login timeout
-    "-b",          // stop on error
-    "-r", "1",     // errors -> stderr
-    "-w", "65535", // very wide so no wrapping
-    "-y", "0",     // no max length for variable types
-    "-Y", "0"      // no max length for wide types (NVARCHAR, etc.)
+    "-S", SERVER,   // server/instance
+    "-d", DB,       // database
+    "-l", "30",     // login timeout (seconds)
+    "-b",           // bail out on errors (non-zero exit)
+    "-r", "1",      // redirect errors to stderr
+    "-w", "65535",  // very wide output to avoid wrapping
+    "-y", "0",      // unlimited length for variable-length types
+    "-Y", "0"       // unlimited length for wide types
   );
-  // Do NOT combine -h with -y/-Y.
+  // No -h here on purpose.
   return args;
 }
 
 function runSqlcmd(extraArgs) {
+  // Spawn sqlcmd with a hard timeout; capture stdout/stderr verbatim.
   return new Promise((resolve) => {
     const args = [...makeBaseArgs(), ...extraArgs];
     if (process.env.DEBUG_SQL) console.log("sqlcmd args =>", args.join(" "));
@@ -42,7 +67,13 @@ function runSqlcmd(extraArgs) {
     let out = "", err = "", done = false;
 
     const finish = (code) => { if (!done) { done = true; resolve({ stdout: out, stderr: err, code }); } };
-    const t = setTimeout(() => { try { cp.kill("SIGKILL"); } catch {} err ||= `sqlcmd timeout after ${TIMEOUT}ms`; finish(1); }, TIMEOUT);
+
+    // Hard kill to prevent hanging child processes
+    const t = setTimeout(() => {
+      try { cp.kill("SIGKILL"); } catch {}
+      err ||= `sqlcmd timeout after ${TIMEOUT}ms`;
+      finish(1);
+    }, TIMEOUT);
 
     cp.stdout.on("data", b => (out += b.toString("utf8")));
     cp.stderr.on("data", b => (err += b.toString("utf8")));
@@ -54,6 +85,7 @@ function runSqlcmd(extraArgs) {
 /* ---------- helpers ---------- */
 
 function buildSetvars(vars = {}) {
+  // Convert { k: v } into a :setvar header. Newlines are stripped from values.
   const lines = [];
   for (const [k, v] of Object.entries(vars)) {
     const val = String(v).replace(/\r?\n/g, " ");
@@ -63,6 +95,7 @@ function buildSetvars(vars = {}) {
 }
 
 function cleanJsonText(buf) {
+  // Remove line breaks, BOM, and "(n rows affected)" tails that sqlcmd may add.
   return buf
     .replace(/\r?\n/g, "")                         // unwrap any line breaks
     .replace(/^\uFEFF/, "")                        // BOM
@@ -70,7 +103,10 @@ function cleanJsonText(buf) {
     .trim();
 }
 
-/** Tolerant JSON extractor: handles headers, missing ']', glued objects. */
+/** Tolerant JSON extractor:
+ *  - Prefers array slices [ ... ]
+ *  - Falls back to object slice { ... } and stitches adjacent objects "}{"
+ */
 function extractJson(rawText) {
   const t = cleanJsonText(rawText);
 
@@ -90,13 +126,15 @@ function extractJson(rawText) {
     return chunk;
   }
 
+  // Nothing JSON-like found
   return "[]";
 }
 
 /* ---------- public API ---------- */
 
 export async function runSqlFile(filePath, vars = {}) {
-  // Wrap with :setvar and include file so vars are available
+  // Execute a .sql file by generating a small wrapper that injects :setvar values
+  // and includes the target file. Returns raw stdout.
   const wrapper = path.join(os.tmpdir(), `wrap_${Date.now()}_${Math.random().toString(36).slice(2)}.sql`);
   const script = `${buildSetvars(vars)}SET NOCOUNT ON;\n:r "${filePath.replace(/"/g, '""')}"\n`;
   await fs.writeFile(wrapper, script, "utf8");
@@ -110,6 +148,8 @@ export async function runSqlFile(filePath, vars = {}) {
 }
 
 export async function runSqlText(sqlText, vars = {}) {
+  // Execute ad-hoc SQL by writing to a temp file (enables :setvar and consistent flags).
+  // Returns raw stdout as text.
   const tmp = path.join(os.tmpdir(), `sql_${Date.now()}_${Math.random().toString(36).slice(2)}.sql`);
   const script = `${buildSetvars(vars)}SET NOCOUNT ON;\n${sqlText}\n`;
   await fs.writeFile(tmp, script, "utf8");
@@ -123,7 +163,8 @@ export async function runSqlText(sqlText, vars = {}) {
 }
 
 export async function runJson(sqlText, vars = {}) {
-  // Keep caller batch intact; ensure final statement returns JSON
+  // Execute a SELECT that returns JSON and parse it.
+  // If the caller did not include FOR JSON, append PATH + INCLUDE_NULL_VALUES.
   let body = sqlText.trim().replace(/;\s*$/, "");
   if (!/FOR\s+JSON\s+/i.test(body)) {
     body += " FOR JSON PATH, INCLUDE_NULL_VALUES";
@@ -145,6 +186,7 @@ export async function runJson(sqlText, vars = {}) {
     if (!jsonStr) return [];
     return JSON.parse(jsonStr);
   } catch (e) {
+    // Surface the trimmed raw output to aid debugging malformed JSON
     let raw = "";
     try { raw = await fs.readFile(outFile, "utf8"); } catch {}
     throw new Error(
@@ -156,5 +198,3 @@ export async function runJson(sqlText, vars = {}) {
     fs.unlink(outFile).catch(() => {});
   }
 }
-
-
