@@ -4,34 +4,28 @@ namespace CampusLearn.Models
 {
     public class Content
     {
-        public Guid ContentId { get; private set; }
-        public string PathOrUrl { get; private set; }
-        public Guid? TopicId { get; private set; }
-        public Guid? ReplyId { get; private set; }
-        public DateTime UploadedOn { get; private set; }
+        // UML: private attributes
+        private int id;
+        private string filePath;
 
-        public Content(string pathOrUrl, Guid? topicId = null, Guid? replyId = null)
+        // Constructor 
+        public Content(int id, string filePath)
         {
-            if (topicId == null && replyId == null) throw new ArgumentException("Content must reference either a topic or a reply.");
-            if (topicId != null && replyId != null) throw new ArgumentException("Content cannot reference both topic and reply (XOR).");
-
-            ContentId = Guid.NewGuid();
-            PathOrUrl = pathOrUrl;
-            TopicId = topicId;
-            ReplyId = replyId;
-            UploadedOn = DateTime.UtcNow;
+            this.id = id;
+            this.filePath = filePath;
         }
 
-        public void RelinkToTopic(Guid topicId)
+        // + relink(newPath)
+        public void relink(string newPath)
         {
-            ReplyId = null;
-            TopicId = topicId;
+            if (string.IsNullOrWhiteSpace(newPath))
+                throw new ArgumentException("New path cannot be empty.", nameof(newPath));
+
+            filePath = newPath;
         }
 
-        public void RelinkToReply(Guid replyId)
-        {
-            TopicId = null;
-            ReplyId = replyId;
-        }
+
+        public int GetId() => id;
+        public string GetFilePath() => filePath;
     }
 }

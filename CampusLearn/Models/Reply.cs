@@ -5,53 +5,89 @@ namespace CampusLearn.Models
 {
     public class Reply
     {
-        public Guid ReplyId { get; private set; }
-        public Topic Topic { get; private set; }
-        public User Author { get; private set; }
-        public Reply Parent { get; private set; }
-        public string Body { get; private set; }
-        public int Upvotes { get; private set; }
-        public int Downvotes { get; private set; }
-        public DateTime CreatedOn { get; private set; }
+        // UML: private attributes
+        private int id;
+        private string body;
+        private Topic topic;
+        private Reply parentReplyId;               
+        private User author;
+        private string description;
+        private int upvote;
+        private int downvote;
+        private DateTime createdOn;
+        private DateTime edited;
+        private readonly List<Reply> children = new List<Reply>();
+        private readonly List<Content> attachments = new List<Content>();
 
-        private readonly List<Reply> _children = new List<Reply>();
-        private readonly List<string> _internalNotes = new List<string>();
+        
+        private static int nextId = 1;
 
-        public IReadOnlyList<Reply> Children => _children.AsReadOnly();
-
-        public Reply(Topic topic, User author, string body, Reply parent = null)
+        // Constructor 
+        public Reply(int id, Topic topic, User author, string body, Reply parent = null, string description = "")
         {
             if (topic == null) throw new ArgumentNullException(nameof(topic));
             if (author == null) throw new ArgumentNullException(nameof(author));
 
-            ReplyId = Guid.NewGuid();
-            Topic = topic;
-            Author = author;
-            Body = body;
-            Parent = parent;
-            CreatedOn = DateTime.UtcNow;
+            this.id = id;
+            this.topic = topic;
+            this.author = author;
+            this.body = body ?? string.Empty;
+            this.description = description ?? string.Empty;
+            this.parentReplyId = parent;
 
-            parent?._children.Add(this);
+            createdOn = DateTime.UtcNow;
+            edited = createdOn;
+
+            parent?.children.Add(this);
         }
 
-        public void Edit(string newBody)
+        
+        public static Reply Create(Topic topic, User author, string body, Reply parent = null, string description = "")
+            => new Reply(nextId++, topic, author, body, parent, description);
+
+        public void edit(string newBody)
         {
-            Body = newBody;
+            if (string.IsNullOrWhiteSpace(newBody))
+                throw new ArgumentException("Body cannot be empty.", nameof(newBody));
+
+            body = newBody;
+            edited = DateTime.UtcNow;
         }
 
-        public Reply ReplyTo(string body)
+        
+        public Reply reply(User author, string body)
         {
-            var child = new Reply(this.Topic, this.Author, body, this);
-            _children.Add(child);
+            if (author == null) throw new ArgumentNullException(nameof(author));
+
+            var child = new Reply(nextId++, topic, author, body ?? string.Empty, this);
+            children.Add(child);
             return child;
         }
 
-        public void Upvote() => Upvotes++;
-        public void Downvote() => Downvotes++;
-
-        internal void AddInternalNote(string note)
+        
+        public void attach(Content content)
         {
-            _internalNotes.Add(note);
+            if (content == null) throw new ArgumentNullException(nameof(content));
+            attachments.Add(content);
         }
+
+        
+        public void upvote() => upvote++;
+
+        public void downvote() => downvote++;
+
+        
+        public int GetId() => id;
+        public string GetBody() => body;
+        public Topic GetTopic() => topic;
+        public Reply GetParent() => parentReplyId;
+        public User GetAuthor() => author;
+        public string GetDescription() => description;
+        public int GetUpvotes() => upvote;
+        public int GetDownvotes() => downvote;
+        public DateTime GetCreatedOn() => createdOn;
+        public DateTime GetEditedOn() => edited;
+        public List<Reply> GetChildren() => new List<Reply>(children);
+        public List<Content> GetAttachments() => new List<Content>(attachments);
     }
 }

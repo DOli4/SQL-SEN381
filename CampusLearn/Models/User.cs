@@ -2,52 +2,119 @@ using System;
 
 namespace CampusLearn.Models
 {
-    public abstract class User
+    public enum UserStatus
     {
-        public Guid UserId { get; protected set; }
-        public string Username { get; protected set; }
-        public string Email { get; protected set; }
-        public string PasswordHash { get; protected set; } // hash in real app
-        public string FirstName { get; protected set; }
-        public string LastName { get; protected set; }
-        public string Phone { get; protected set; }
-        public DateTime? DateOfBirth { get; protected set; }
-        public string Status { get; protected set; } = "Active";
-        public DateTime CreatedOn { get; protected set; }
-        public Role Role { get; set; }
+        Active,
+        Inactive
+    }
 
-        protected User(string username, string email, string firstName, string lastName)
+    public class User
+    {
+        // Attributes
+        private int id;
+        private string userName;
+        private string firstName;
+        private string lastName;
+        private string phoneNumber;
+        private string email;
+        private string credentialInfo;
+        private DateTime dateOfBirth;
+        private string password;
+        private UserStatus status;
+        private DateTime createdOn;
+
+        // Constructor
+        public User(int id, string userName, string firstName, string lastName,
+                    string phoneNumber, string email, string password, DateTime dateOfBirth)
         {
-            UserId = Guid.NewGuid();
-            Username = username;
-            Email = email;
-            FirstName = firstName;
-            LastName = lastName;
-            CreatedOn = DateTime.UtcNow;
+            this.id = id;
+            this.userName = userName;
+            this.firstName = firstName;
+            this.lastName = lastName;
+            this.phoneNumber = phoneNumber;
+            this.email = email;
+            this.password = password;
+            this.dateOfBirth = dateOfBirth;
+            this.status = UserStatus.Active;
+            this.createdOn = DateTime.UtcNow;
         }
 
-        public virtual void UpdateProfile(string firstName, string lastName, string phone = null)
+        
+        public void Register()
         {
-            FirstName = firstName;
-            LastName = lastName;
-            Phone = phone;
+            credentialInfo = $"Registered on {DateTime.UtcNow}";
         }
 
-        public void Deactivate() => Status = "Deactivated";
-        public void Reactivate() => Status = "Active";
-
-        // Dummy register/login placeholders (replace with real auth)
-        public virtual void Register(string passwordHash)
+        
+        public bool Login(string password)
         {
-            PasswordHash = passwordHash;
-            // additional registration logic...
+            return this.password == password;
         }
 
-        public virtual bool Login(string passwordHash)
+        
+        public void UpdateProfile(string firstName, string lastName, string phoneNumber)
         {
-            return PasswordHash == passwordHash;
+            this.firstName = firstName;
+            this.lastName = lastName;
+            this.phoneNumber = phoneNumber;
         }
 
-        public string DisplayName => $"{FirstName} {LastName}";
+        public void Deactivate()
+        {
+            status = UserStatus.Inactive;
+        }
+
+        
+        public void Activate()
+        {
+            status = UserStatus.Active;
+        }
+
+        
+        public void Upload(string filePath)
+        {
+            Console.WriteLine($"{userName} uploaded content: {filePath}");
+        }
+
+        
+        public void CreateTopic(string title, string description)
+        {
+            Console.WriteLine($"{userName} created a topic: {title} - {description}");
+        }
+    }
+
+    
+    public class Student : User
+    {
+        public Student(int id, string userName, string firstName, string lastName,
+                        string phoneNumber, string email, string password, DateTime dateOfBirth)
+            : base(id, userName, firstName, lastName, phoneNumber, email, password, dateOfBirth) { }
+
+        public void Subscribe() { }
+        public void Unsubscribe() { }
+        public void EnableNoti() { }
+        public void DisableNoti() { }
+    }
+
+    public class Tutor : User
+    {
+        public Tutor(int id, string userName, string firstName, string lastName,
+                        string phoneNumber, string email, string password, DateTime dateOfBirth)
+            : base(id, userName, firstName, lastName, phoneNumber, email, password, dateOfBirth) { }
+
+        public void AnswerTopic() { }
+        public void UploadContent() { }
+        public void Feedback() { }
+    }
+
+    public class Admin : User
+    {
+        public Admin(int id, string userName, string firstName, string lastName,
+                        string phoneNumber, string email, string password, DateTime dateOfBirth)
+            : base(id, userName, firstName, lastName, phoneNumber, email, password, dateOfBirth) { }
+
+        public void Approve() { }
+        public void Moderate() { }
+        public void BanUser() { }
     }
 }

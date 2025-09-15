@@ -1,47 +1,52 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace CampusLearn.Models
 {
     public class Tutor : User
     {
         public List<Module> EnrolledModules { get; } = new List<Module>();
-        public List<Topic> CreatedTopics { get; } = new List<Topic>();
+        public List<Topic> CreatedTopics { get; } = new List<Topic>(); 
+
+        
+        private static int _nextContentId = 1;
 
         public Tutor(string username, string email, string firstName, string lastName)
             : base(username, email, firstName, lastName) { }
 
-        public Topic CreateTopic(Module module, string title, string description)
+        
+        public Reply answerTopic(Topic topic, string body)
         {
-            if (!EnrolledModules.Contains(module))
-                throw new InvalidOperationException("Tutor must be enrolled in the module to create topic.");
-
-            var topic = module.CreateTopic(title, description, this);
-            CreatedTopics.Add(topic);
-            return topic;
-        }
-
-        public Reply AnswerTopic(Topic topic, string body)
-        {
-            if (!EnrolledModules.Contains(topic.Module))
+            if (topic == null) throw new ArgumentNullException(nameof(topic));
+            if (!EnrolledModules.Contains(topic.GetModule()))
                 throw new InvalidOperationException("Tutor must be enrolled in the module to answer the topic.");
 
-            var reply = topic.AddReply(this, body);
-            return reply;
+            return topic.addReply(this, body);
         }
 
-        public Content UploadMaterial(Topic targetTopic, string pathOrUrl)
+        
+        public Content upload(Topic topic, string filePath)
         {
-            var content = new Content(pathOrUrl, topicId: targetTopic.TopicId);
-            targetTopic.AttachContent(content);
+            if (topic == null) throw new ArgumentNullException(nameof(topic));
+            if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentException("File path required.", nameof(filePath));
+            if (!EnrolledModules.Contains(topic.GetModule()))
+                throw new InvalidOperationException("Tutor must be enrolled in the module to upload to this topic.");
+
+            var content = new Content(_nextContentId++, filePath);
+            topic.attach(content);
             return content;
         }
 
-        public void GiveFeedback(Reply reply, string feedback)
+        
+        public Reply feedback(Reply parentReply, string body)
         {
-            // simple behavior placeholder
-            reply.AddInternalNote($"Feedback from {DisplayName}: {feedback}");
+            if (parentReply == null) throw new ArgumentNullException(nameof(parentReply));
+            var topic = parentReply.GetTopic();
+            if (!EnrolledModules.Contains(topic.GetModule()))
+                throw new InvalidOperationException("Tutor must be enrolled in the module to give feedback.");
+
+            // feedback is modeled as a child reply to the given reply
+            return parentReply.reply(this, body);
         }
     }
 }

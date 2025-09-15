@@ -1,64 +1,75 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+
 
 namespace CampusLearn.Models
 {
     public class Module
     {
-        public Guid ModuleId { get; private set; }
-        public string Code { get; private set; } // e.g. CS101
-        public string Name { get; private set; }
-        public string Description { get; private set; }
-        public List<User> EnrolledUsers { get; } = new List<User>();
-        public List<Topic> Topics { get; } = new List<Topic>();
+        // UML: private attributes
+        private int id;
+        private string name;
+        private string description;
+        private List<Topic> topics = new List<Topic>();
+        private List<User> enrolledUsers = new List<User>();
+        private DateTime startDate;
+        private DateTime endDate;
 
-        public Module(string code, string name, string description = null)
+        
+        public Module(int id, string name, string description, DateTime startDate, DateTime endDate)
         {
-            ModuleId = Guid.NewGuid();
-            Code = code;
-            Name = name;
-            Description = description;
+            this.id = id;
+            this.name = name;
+            this.description = description;
+            this.startDate = startDate;
+            this.endDate = endDate;
         }
 
-        public bool EnrolUser(User user)
+        
+        public void enrol(User user)
         {
-            if (user == null) return false;
-            if (!EnrolledUsers.Contains(user))
-            {
-                EnrolledUsers.Add(user);
-                if (user is Student s && !s.EnrolledModules.Contains(this)) s.EnrolledModules.Add(this);
-                if (user is Tutor t && !t.EnrolledModules.Contains(this)) t.EnrolledModules.Add(this);
-                return true;
-            }
-            return false;
+            if (user == null) throw new ArgumentNullException(nameof(user));
+            if (!enrolledUsers.Contains(user))
+                enrolledUsers.Add(user);
         }
 
-        public bool RemoveUser(User user)
+
+        public void unenrol(User user)
         {
-            if (user == null) return false;
-            if (EnrolledUsers.Contains(user))
-            {
-                EnrolledUsers.Remove(user);
-                if (user is Student s && s.EnrolledModules.Contains(this)) s.EnrolledModules.Remove(this);
-                if (user is Tutor t && t.EnrolledModules.Contains(this)) t.EnrolledModules.Remove(this);
-                return true;
-            }
-            return false;
+            if (user == null) throw new ArgumentNullException(nameof(user));
+            enrolledUsers.Remove(user);
         }
 
-        public Topic CreateTopic(string title, string description, User creator)
+        
+        public Topic createTopic(User creator, string title, string description)
         {
+            if (creator == null) throw new ArgumentNullException(nameof(creator));
+            if (string.IsNullOrWhiteSpace(title)) throw new ArgumentException("Title required.", nameof(title));
+
+            // Assumes a Topic constructor that links module, creator, title, description.
             var topic = new Topic(title, description, creator, this);
-            Topics.Add(topic);
+            topics.Add(topic);
             return topic;
         }
 
-        public void RemoveTopic(Topic topic)
+        
+        public List<Topic> listTopics()
         {
-            if (Topics.Contains(topic)) Topics.Remove(topic);
+            // Return a shallow copy to preserve encapsulation
+            return new List<Topic>(topics);
+        } 
+
+        public void rename(string newName)
+        {
+            if (string.IsNullOrWhiteSpace(newName))
+                throw new ArgumentException("Name cannot be empty.", nameof(newName));
+            name = newName;
         }
 
-        public List<Topic> ListTopics() => Topics.ToList();
+
+        public void updateDes(string text)
+        {
+            description = text ?? string.Empty;
+        }
     }
 }
