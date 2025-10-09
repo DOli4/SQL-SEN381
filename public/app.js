@@ -1,16 +1,22 @@
-// Tiny helpers for fetch + UI
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import { getPool } from './db/mssql.js';
 
-export async function api(path, options = {}) {
-  const res = await fetch(path, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    credentials: 'include',
-    ...options,
-  });
-  let data = null;
-  try { data = await res.json(); } catch {}
-  if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
-  return data;
-}
+const app = express();
+app.use(express.json());
+app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*' }));
 
-// Pages can add functions on window.* if needed.
-// Keep this minimal; page-specific scripts can be inline or separate later.
+app.get('/health', async (_req, res) => {
+  try {
+    const pool = await getPool();
+    const r = await (await pool.request().query('SELECT 1 AS ok')).recordset[0];
+    res.json({ ok: true, db: r.ok === 1 });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.listen(process.env.PORT || 3000, () =>
+  console.log(`API listening on ${process.env.PORT || 3000}`)
+);

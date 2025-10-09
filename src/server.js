@@ -38,6 +38,22 @@ app.use((req, res, next) => {
   next();
 });
 
+//Health routes
+app.get('/_ping', (req,res)=>res.send('OK'));
+
+import { getPool } from './db/mssql.js';
+app.get('/db-test', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const r = await pool.request().query('SELECT DB_NAME() AS Db, GETDATE() AS Now');
+    res.json(r.recordset[0]); // {Db, Now}
+  } catch (e) {
+    console.error('DB TEST ERROR:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
 // App logs (optional)
 console.log(
   'ENV → SQL_SERVER=%s | SQL_DB=%s',
