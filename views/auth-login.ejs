@@ -1,0 +1,37 @@
+<div class="form-narrow">
+  <h2 class="mb-3">Sign in</h2>
+  <form id="loginForm" onsubmit="return false;">
+    <div class="mb-3">
+      <label class="form-label">Email</label>
+      <input name="email" type="email" class="form-control" placeholder="you@belgiumcampus.ac.za" required />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Password</label>
+      <input name="password" type="password" class="form-control" required />
+    </div>
+    <button class="btn btn-primary w-100" onclick="doLogin()">Login</button>
+    <p id="msg" class="text-danger mt-2"></p>
+  </form>
+</div>
+
+<script>
+async function doLogin(){
+  const body = {
+    email: loginForm.email.value.trim(),
+    password: loginForm.password.value
+  };
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) { msg.textContent = data.error || 'Login failed'; return; }
+    window.location = '/dashboard';
+  } catch (e) {
+    msg.textContent = e.message;
+  }
+}
+</script>
