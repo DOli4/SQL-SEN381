@@ -9,6 +9,23 @@ import path from 'node:path';                    // Path utilities for cross-pla
 import express from 'express';                   // Web framework
 import expressLayouts from 'express-ejs-layouts';// Simple layout support for EJS
 import dotenv from 'dotenv';                     // Loads environment variables from .env
+import cookieParser from 'cookie-parser';
+
+import jwt from 'jsonwebtoken';
+
+// Attach req.user & res.locals.user if cookie present
+app.use((req, res, next) => {
+  const t = req.cookies?.token;
+  if (!t) { res.locals.user = null; return next(); }
+  try {
+    const payload = jwt.verify(t, process.env.JWT_SECRET);
+    req.user = payload;          // { sub, email, name, role }
+    res.locals.user = payload;   // usable in EJS: <%= user?.name %>
+  } catch {
+    res.locals.user = null;
+  }
+  next();
+});
 
 // Load .env from project root; `override: true` ensures process.env uses file values.
 // This must run before any module reads process.env to avoid default fallbacks.
@@ -29,6 +46,9 @@ app.set('layout', 'layout');
 // - Static files include CSS, images, client-side scripts, etc.
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.resolve(process.cwd(), 'public')));
+
+app.use(express.json());
+app.use(cookieParser());
 
 // Log the key environment values used by the SQL layer and script panel.
 // This is helpful during setup and troubleshooting; avoid logging secrets.
@@ -51,6 +71,51 @@ import diagRoutes from './diag.js';
 app.use('/', crudRoutes);
 app.use('/', editorRoutes);
 app.use('/', diagRoutes);
+
+//API routers (ESM imports) 
+import authRoutes from './routes/auth.routes.js';
+import topicsRoutes from './routes/topics.routes.js';
+import studentsRoutes from './routes/students.routes.js';
+import tutorsRoutes from './routes/tutors.routes.js';
+import resourcesRoutes from './routes/resources.routes.js';
+import messagesRoutes from './routes/messages.routes.js';
+
+app.use('/api/auth', authRoutes);
+app.use('/api/topics', topicsRoutes);
+app.use('/api/students', studentsRoutes);
+app.use('/api/tutors', tutorsRoutes);
+app.use('/api/resources', resourcesRoutes);
+app.use('/api/messages', messagesRoutes);
+
+
+app.get('/login', (req, res) => res.render('auth-login'));
+app.get('/register', (req, res) => res.render('auth-register'));
+
+app.get('/topics', (req, res) => res.render('topics'));
+app.get('/dashboard', requireLogin, (req, res) => res.render('dashboard'));
+
+
+app.post('/logout', (req, res) => {
+  res.clearCookie('token', { httpOnly: true, sameSite:'lax', secure:false });
+  res.redirect('/login');
+});
+
+
+
+function requireLogin(req, res, next) {
+  if (!req.user) return res.redirect('/login');
+  next();
+}
+
+function requireRole(role){
+  return (req,res,next)=> {
+    if(!req.user) return res.redirect('/login');
+    if(req.user.role !== role) return res.status(403).send('Forbidden');
+    next();
+  };
+}
+app.get('/topics/create', requireRole('Student'), (req,res)=> res.render('topic-create'));
+
 
 // Central error handler to render a plain-text stack trace for unexpected errors.
 // This keeps failures visible during development and simple deployments.
@@ -75,3 +140,6 @@ const port = process.env.PORT || 3000;
 app.listen(port, () =>
   console.log(`SQL Script Web Panel running on http://localhost:${port}`)
 );
+
+
+

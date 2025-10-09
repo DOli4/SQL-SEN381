@@ -1,0 +1,24 @@
+<form id="loginForm" class="form" onsubmit="return false;">
+  <h2>Login</h2>
+  <input name="email" type="email" placeholder="you@belgiumcampus.ac.za" required />
+  <input name="password" type="password" placeholder="Password" required />
+  <button onclick="doLogin()">Login</button>
+  <p id="msg"></p>
+</form>
+<script>
+async function doLogin(){
+  const body = {
+    email: loginForm.email.value,
+    password: loginForm.password.value
+  };
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body),
+    credentials: 'include' // so cookies are stored if we set them server-side
+  });
+  const data = await res.json();
+  if(!res.ok){ msg.textContent = data.error || 'Login failed'; return; }
+  window.location = '/dashboard';
+}
+</script>

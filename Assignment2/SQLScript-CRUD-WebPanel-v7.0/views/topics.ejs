@@ -1,0 +1,16 @@
+<h2>Topics</h2>
+<div id="topics"></div>
+
+<script>
+(async () => {
+  const res = await fetch('/api/topics', { credentials:'include' });
+  const topics = await res.json();
+  document.getElementById('topics').innerHTML = topics.map(t =>
+    `<article>
+       <h3>${t.Title}</h3>
+       <p>${t.Description ?? ''}</p>
+       <small>${t.ModuleName} • by ${t.CreatedByName}</small>
+     </article>`
+  ).join('');
+})();
+</script>
