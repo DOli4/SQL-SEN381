@@ -110,6 +110,20 @@ app.post('/logout', (req, res) => {
   res.redirect('/login');
 });
 
+// Test Db connection
+app.get('/db-test', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const r = await pool.request().query('SELECT DB_NAME() AS Db, SUSER_SNAME() AS Login, GETDATE() AS Now');
+    res.json(r.recordset[0]);
+  } catch (e) {
+    console.error('DB TEST ERROR:', e);
+    const msg = e?.message || JSON.stringify(e);
+    res.status(500).json({ error: msg });
+  }
+});
+
+
 // Error handler
 app.use((err, req, res, next) => {
   console.error('Request error:', err);
