@@ -5,6 +5,7 @@ import expressLayouts from 'express-ejs-layouts';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
+import contentRoutes from './routes/content.routes.js';
 
 // Load env first
 dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
@@ -23,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.resolve(process.cwd(), 'public')));
+app.use('/api/content', contentRoutes);
 
 // Attach req.user/res.locals.user from JWT cookie (must be AFTER cookieParser, BEFORE routes)
 app.use((req, res, next) => {
@@ -103,6 +105,7 @@ app.get('/register', (req, res) => res.render('auth-register'));
 app.get('/dashboard', requireLogin, (req, res) => res.render('dashboard'));
 app.get('/topics', (req, res) => res.render('topics'));
 app.get('/topics/create', requireRole('Student'), (req, res) => res.render('topic-create'));
+app.get('/content/upload', (req, res) => res.render('content-upload'));
 
 // Logout
 app.post('/logout', (req, res) => {
