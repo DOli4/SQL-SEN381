@@ -4,10 +4,10 @@ export async function list(req, res) {
   const pool = await getPool();
   const rs = await pool.request().query(`
     SELECT t.Topic_ID, t.Title, t.[Description], t.Module_ID,
-           m.[Name]  AS ModuleName,
-           u.User_ID AS CreatedByUserId,
-           CONCAT(COALESCE(u.First_Name,''), ' ', COALESCE(u.Last_Name,'')) AS CreatedByName,
-           t.Upvotes, t.Downvotes
+            m.[Name]  AS ModuleName,
+            u.User_ID AS CreatedByUserId,
+            CONCAT(COALESCE(u.First_Name,''), ' ', COALESCE(u.Last_Name,'')) AS CreatedByName,
+            t.Upvotes, t.Downvotes
     FROM dbo.Topic t
     JOIN dbo.[User] u ON u.User_ID = t.User_ID
     JOIN dbo.Modules m ON m.Module_ID = t.Module_ID
@@ -22,10 +22,10 @@ export async function getOne(req, res) {
     .input('Topic_ID', sql.Int, Number(req.params.id))
     .query(`
       SELECT t.Topic_ID, t.Title, t.[Description], t.Module_ID,
-             m.[Name]  AS ModuleName,
-             u.User_ID AS CreatedByUserId,
-             CONCAT(COALESCE(u.First_Name,''), ' ', COALESCE(u.Last_Name,'')) AS CreatedByName,
-             t.Upvotes, t.Downvotes
+              m.[Name]  AS ModuleName,
+              u.User_ID AS CreatedByUserId,
+              CONCAT(COALESCE(u.First_Name,''), ' ', COALESCE(u.Last_Name,'')) AS CreatedByName,
+              t.Upvotes, t.Downvotes
       FROM dbo.Topic t
       JOIN dbo.[User] u ON u.User_ID = t.User_ID
       JOIN dbo.Modules m ON m.Module_ID = t.Module_ID
