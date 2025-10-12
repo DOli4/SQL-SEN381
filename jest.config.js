@@ -1,5 +1,7 @@
+
 export default {
-    testEnvironment: 'node',
+  testEnvironment: 'node', // default for backend tests
+    setupFiles: ['<rootDir>/tests/setup-globals.js'], // <-- add this line
     roots: ['<rootDir>/tests'],
     collectCoverage: true,
     collectCoverageFrom: [
