@@ -23,6 +23,9 @@ import resourcesRoutes from './routes/resources.routes.js';
 import messagesRoutes from './routes/messages.routes.js';
 import repliesRoutes from './routes/replies.routes.js';
 import contentRoutes from './routes/content.routes.js'; // <<< one import
+import subsRouter from './routes/subscriptions.routes.js'
+app.use('/api', subsRouter)
+
 
 const app = express();
 
