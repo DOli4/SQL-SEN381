@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import auth from '../middleware/auth.js';
+import { requireAuth} from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/threads', auth(true), async (req, res) => {
+router.get('/threads', requireAuth, async (req, res) => {
   res.json({ ok: true, message: 'Message threads stub' });
 });
 

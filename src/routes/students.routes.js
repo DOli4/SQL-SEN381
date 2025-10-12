@@ -1,11 +1,10 @@
 import { Router } from 'express';
-import auth from '../middleware/auth.js';
-import allowRoles from '../middleware/rbac.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';   // use these only
 
 const router = Router();
 
 // Example Admin-only endpoint
-router.get('/', auth(true), allowRoles('Admin'), async (req, res) => {
+router.get('/', requireAuth, requireRole('Admin'), async (req, res) => {
   res.json({ ok: true, message: 'Students endpoint stub' });
 });
 

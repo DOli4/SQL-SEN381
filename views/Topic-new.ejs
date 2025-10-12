@@ -1,0 +1,20 @@
+<h1 class="mb-3">New Topic</h1>
+<form id="topicForm" class="vstack gap-3">
+  <div>
+    <label class="form-label">Title</label>
+    <input class="form-control" name="title" required maxlength="500" placeholder="e.g., Exam Tips">
+  </div>
+  <div>
+    <label class="form-label">Module</label>
+    <input class="form-control" name="moduleId" type="number" value="1" required>
+    <div class="form-text">Use a real Module_ID (e.g., 1 for SEN381) from dbo.Modules.</div>
+  </div>
+  <div>
+    <label class="form-label">Content</label>
+    <textarea class="form-control" name="description" rows="5" placeholder="Study guide"></textarea>
+  </div>
+  <button class="btn btn-primary" type="submit">Submit</button>
+  <p id="msg" class="mt-2"></p>
+</form>
+
+<script type="module" src="/js/topic-new.js"></script>

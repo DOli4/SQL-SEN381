@@ -31,7 +31,7 @@ const storage = multer.diskStorage({
 // ~50MB limit, tweak as needed
 export const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: 120 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     // Example gate: allow common docs/images/videos; tighten if needed
     const ok = /^(application|image|video|audio|text)\//.test(file.mimetype);

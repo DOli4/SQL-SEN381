@@ -3,15 +3,22 @@ import path from 'node:path';
 import express from 'express';
 import expressLayouts from 'express-ejs-layouts';
 import dotenv from 'dotenv';
-import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
 import contentRoutes from './routes/content.routes.js';
-
-// Load env first
-dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
+import cookieParser from 'cookie-parser';
+import { attachUser } from './middleware/auth.js';
 
 // Create the app BEFORE any app.use(...)
 const app = express();
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(cookieParser());
+app.use(attachUser);
+            
+
+// Load env first
+dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
 
 // View engine (EJS)
 app.set('view engine', 'ejs');
@@ -106,6 +113,19 @@ app.get('/dashboard', requireLogin, (req, res) => res.render('dashboard'));
 app.get('/topics', (req, res) => res.render('topics'));
 app.get('/topics/create', requireRole('Student'), (req, res) => res.render('topic-create'));
 app.get('/content/upload', (req, res) => res.render('content-upload'));
+
+// Forum list
+app.get('/forum', (req, res) => res.render('forum'));
+
+// New topic form (login required)
+import { requireAuth } from './middleware/auth.js';
+app.get('/forum/new', requireAuth, (req, res) => res.render('topic-new'));
+
+// Topic details + upload form
+app.get('/forum/:id', requireAuth, (req, res) => {
+  res.render('topic-detail', { topicId: req.params.id });
+});
+
 
 // Logout
 app.post('/logout', (req, res) => {
