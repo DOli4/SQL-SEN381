@@ -2,13 +2,15 @@
 <div id="topic" class="mb-4"></div>
 
 <h5 class="mt-4">Attach content</h5>
-<form id="uploadForm" class="vstack gap-3" enctype="multipart/form-data">
+<form id="uploadForm"
+      class="vstack gap-3"
+      action="/api/topics/<%= topicId %>/content"
+      method="post"
+      enctype="multipart/form-data">
   <input type="hidden" name="topicId" value="<%= topicId %>">
-
   <div>
     <input class="form-control" type="file" name="file" required>
   </div>
-
   <button class="btn btn-secondary" type="submit">Upload</button>
   <p id="uploadMsg" class="mt-2"></p>
 </form>
@@ -16,9 +18,31 @@
 <h5 class="mt-4">Attachments</h5>
 <ul id="files" class="list-group"></ul>
 
+<h5 class="mt-4">Replies</h5>
+<ul id="replies" class="list-group mb-3"></ul>
+<form id="replyForm" class="vstack gap-3">
+  <textarea class="form-control" name="description" rows="3" required placeholder="Write a reply..."></textarea>
+  <button class="btn btn-primary" type="submit">Post Reply</button>
+  <p id="replyMsg" class="mt-2"></p>
+</form>
+
+<div class="mt-3">
+  <a class="btn btn-outline-primary" href="/forum/<%= topicId %>/edit">Edit</a>
+  <button id="delBtn" class="btn btn-outline-danger">Delete</button>
+</div>
+
 <script>
-  // make id available to topic-detail.js
+  // make topic id available to /topic-detail.js
   const topicId = <%- JSON.stringify(topicId) %>;
+
+  // delete button (kept here so it always has topicId)
+  document.querySelector('#delBtn')?.addEventListener('click', async () => {
+    if (!confirm('Delete this topic and all its attachments/replies?')) return;
+    const r = await fetch('/api/topics/' + topicId, { method:'DELETE', credentials:'same-origin' });
+    if (!r.ok) return alert(await r.text());
+    location.href = '/forum';
+  });
 </script>
 
-<script type="module" src="/public/topic-detail.js"></script>
+<!-- served from /public because of express.static -->
+<script type="module" src="/topic-detail.js"></script>

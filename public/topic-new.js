@@ -1,37 +1,35 @@
-async function http(path, opts={}) {
+async function http(path, body) {
   const res = await fetch('/api' + path, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'same-origin',
-    ...opts
+    body: JSON.stringify(body)
   });
   if (!res.ok) throw new Error((await res.text()) || res.statusText);
   return res.json();
 }
 
 const form = document.querySelector('#topicForm');
-const msg  = document.querySelector('#msg');
+const msg  = document.querySelector('#msg'); // optional <p id="msg"></p> under the button
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  msg.textContent = '';
-  const data = Object.fromEntries(new FormData(form).entries());
-  if (!data.title?.trim()) {
-    msg.className = 'text-danger'; msg.textContent = 'Title is required'; return;
-  }
+  if (msg) { msg.className=''; msg.textContent=''; }
+
+  const fd = new FormData(form);
+  const title = (fd.get('title') || '').trim();
+  const moduleId = Number(fd.get('moduleId'));
+  const description = (fd.get('description') || '').trim() || null;
+
+  if (!title) { (msg? (msg.className='text-danger', msg.textContent='Title is required') : alert('Title is required')); return; }
+  if (!moduleId) { (msg? (msg.className='text-danger', msg.textContent='Module ID is required') : alert('Module ID is required')); return; }
+
   try {
-    const r = await http('/topics', {
-      method: 'POST',
-      body: JSON.stringify({
-        title: data.title.trim(),
-        moduleId: Number(data.moduleId),
-        description: data.description?.trim() || null
-      })
-    });
-    msg.className = 'text-success';
-    msg.textContent = 'Topic saved. Redirecting…';
-    location.href = `/forum/${r.Topic_ID || r.id || ''}`;
-  } catch (e) {
-    msg.className = 'text-danger';
-    msg.textContent = 'Failed: ' + e.message;
+    const r = await http('/topics', { title, moduleId, description });
+    const id = r.Topic_ID || r.id;
+    if (!id) throw new Error('API did not return Topic_ID');
+    location.href = `/forum/${id}`;
+  } catch (err) {
+    (msg? (msg.className='text-danger', msg.textContent = 'Failed: ' + err.message) : alert(err.message));
   }
 });
