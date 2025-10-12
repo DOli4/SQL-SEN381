@@ -1,0 +1,130 @@
+<% /* Header row: operation label and Back link */ %>
+<div class="mb-3 d-flex align-items-center justify-content-between">
+  <h2 class="m-0 text-capitalize"><%= op %> — <code><%= pretty %></code></h2>
+  <a class="btn btn-outline-secondary" href="/crud">Back</a>
+</div>
+
+<% /* Main CRUD form: posts to /crud/run with hidden context (op, table, schema, metadata) */ %>
+<form method="post" action="/crud/run" class="card p-3 shadow-sm">
+  <% /* Hidden context used by the server route to rebuild SQL safely.
+         Do not rename these fields; crud.run relies on them. */ %>
+  <input type="hidden" name="op" value="<%= op %>">
+  <input type="hidden" name="schema" value="<%= schema %>">
+  <input type="hidden" name="table" value="<%= table %>">
+  <input type="hidden" name="tableFq" value="<%= tableFq %>">
+  <input type="hidden" name="pretty" value="<%= pretty %>">
+  <input type="hidden" name="columnsJson" value='<%- JSON.stringify(columns) %>'>
+  <input type="hidden" name="pkJson" value='<%- JSON.stringify(pk) %>'>
+
+  <% /* ---------------------------- VIEW ---------------------------- */ %>
+  <% if (op === 'view') { %>
+    <% /* Optional equality filter:
+           - User can choose any column
+           - Server will coerce quoting based on column data type
+           - Leaving "Filter column" blank shows TOP(100) without filtering */ %>
+    <div class="row g-3">
+      <div class="col-md-5">
+        <label class="form-label">Filter column (optional)</label>
+        <select class="form-select" name="filterCol">
+          <option value="">(none)</option>
+          <% columns.forEach(c => { %>
+            <option value="<%= c.name %>"><%= c.name %> (<%= c.dataType %>)</option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="col-md-7">
+        <label class="form-label">Value</label>
+        <input class="form-control" name="filterVal" placeholder="equals value">
+      </div>
+    </div>
+  <% } %>
+
+  <% /* --------------------------- INSERT --------------------------- */ %>
+  <% if (op === 'insert') { %>
+    <% /* Renders inputs for all non-identity columns:
+           - For FK columns with predefined options, show a dropdown (value = FK ID, label = human-readable)
+           - For all others, render a free-text input (server escapes/quotes as needed)
+           - Placeholders indicate optionality via NULLability */ %>
+    <div class="row g-3">
+      <% columns.forEach(c => { if (c.isIdentity === 1) return; %>
+        <div class="col-md-4">
+          <label class="form-label">
+            <%= c.name %>
+            <small class="text-muted">(<%= c.dataType %><%= c.maxLen ? ','+c.maxLen : '' %><%= c.isNullable==='YES' ? ', NULL' : '' %>)</small>
+          </label>
+          <% if (fkOptions && fkOptions[c.name]) { %>
+            <% /* Dropdown options derived from FK table per FK map in the router */ %>
+            <select class="form-select" name="col_<%= c.name %>">
+              <option value="">(select)</option>
+              <% fkOptions[c.name].forEach(o => { %>
+                <option value="<%= o.value %>"><%= o.label %> (ID=<%= o.value %>)</option>
+              <% }) %>
+            </select>
+          <% } else { %>
+            <% /* Free-text value; backend will decide whether to quote based on data type */ %>
+            <input class="form-control" name="col_<%= c.name %>" placeholder="<%= c.isNullable==='YES' ? 'optional' : '' %>">
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <% /* --------------------------- UPDATE --------------------------- */ %>
+  <% if (op === 'update') { %>
+    <% /* Update requires full PK to locate the row.
+           - PK inputs are required
+           - Non-PK, non-identity fields are optional: blank means "do not modify" */ %>
+    <div class="alert alert-secondary">Provide <strong>primary key</strong> to locate the row, then set columns to update.</div>
+    <div class="row g-3">
+      <% pk.forEach(p => { %>
+        <div class="col-md-4">
+          <label class="form-label">PK: <%= p.name %></label>
+          <input class="form-control" name="pk_<%= p.name %>" required>
+        </div>
+      <% }) %>
+    </div>
+    <hr>
+    <div class="row g-3">
+      <% columns.forEach(c => { if (pk.some(p => p.name === c.name) || c.isIdentity===1) return; %>
+        <div class="col-md-4">
+          <label class="form-label"><%= c.name %> <small class="text-muted">(<%= c.dataType %>)</small></label>
+          <% if (fkOptions && fkOptions[c.name]) { %>
+            <% /* Optional FK dropdown; selecting nothing skips this column */ %>
+            <select class="form-select" name="col_<%= c.name %>">
+              <option value="">(leave blank to skip)</option>
+              <% fkOptions[c.name].forEach(o => { %>
+                <option value="<%= o.value %>"><%= o.label %> (ID=<%= o.value %>)</option>
+              <% }) %>
+            </select>
+          <% } else { %>
+            <% /* Optional free-text update; blank skips this column */ %>
+            <input class="form-control" name="col_<%= c.name %>" placeholder="leave blank to skip">
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <% /* --------------------------- DELETE --------------------------- */ %>
+  <% if (op === 'delete') { %>
+    <% /* Delete requires full PK match; no partial or non-PK filters are used.
+           This is intentionally strict to avoid accidental mass deletes. */ %>
+    <div class="alert alert-warning">This will delete the row matching the <strong>primary key</strong> values.</div>
+    <div class="row g-3">
+      <% pk.forEach(p => { %>
+        <div class="col-md-4">
+          <label class="form-label">PK: <%= p.name %></label>
+          <input class="form-control" name="pk_<%= p.name %>" required>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <% /* Submission controls:
+         - "Run" submits to /crud/run for server-side execution
+         - "Cancel" navigates back to the CRUD landing page */ %>
+  <div class="mt-3 d-flex gap-2">
+    <button class="btn btn-primary">Run</button>
+    <a class="btn btn-outline-secondary" href="/crud">Cancel</a>
+  </div>
+</form>

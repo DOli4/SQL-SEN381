@@ -1,0 +1,34 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">Dashboard</h2>
+  <div>
+    <a class="btn btn-outline-secondary btn-sm" href="/topics">View Topics</a>
+    <% if (user && user.role === 'Student') { %>
+      <a class="btn btn-primary btn-sm" href="/topics/create">New Topic</a>
+    <% } %>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-6">
+    <div class="card card-compact">
+      <div class="card-body">
+        <h5 class="card-title">Welcome</h5>
+        <p class="mb-0">You are signed in as <strong><%= user?.name %></strong> (<%= user?.role %>).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card card-compact">
+      <div class="card-body">
+        <h5 class="card-title">Quick actions</h5>
+        <ul class="mb-0">
+          <li><a href="/topics">Browse topics</a></li>
+          <% if (user && user.role === 'Student') { %>
+            <li><a href="/topics/create">Create a topic</a></li>
+          <% } %>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

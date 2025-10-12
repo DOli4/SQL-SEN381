@@ -1,0 +1,44 @@
+<div class="form-narrow">
+  <h2 class="mb-3">New Topic</h2>
+  <form id="f" onsubmit="return false;">
+    <div class="mb-3">
+      <label class="form-label">Title</label>
+      <input name="title" class="form-control" required />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Module</label>
+      <!-- simple numeric for now; you can replace with a module dropdown later -->
+      <input name="moduleId" type="number" class="form-control" placeholder="e.g., 1" required />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Description</label>
+      <textarea name="description" rows="5" class="form-control" placeholder="Describe your issue..."></textarea>
+    </div>
+
+    <button class="btn btn-primary w-100" onclick="save()">Create Topic</button>
+    <p id="msg" class="text-danger mt-2"></p>
+  </form>
+</div>
+
+<script>
+async function save(){
+  const body = {
+    title: f.title.value.trim(),
+    moduleId: Number(f.moduleId.value),
+    description: f.description.value.trim() || null
+  };
+  try {
+    const res = await fetch('/api/topics', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      credentials: 'include',
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) { msg.textContent = data.error || 'Failed to create topic'; return; }
+    window.location = '/topics';
+  } catch (e) { msg.textContent = e.message; }
+}
+</script>

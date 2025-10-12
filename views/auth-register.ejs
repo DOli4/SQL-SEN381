@@ -1,0 +1,54 @@
+<script type="module" src="/public/register.js"></script>
+<div class="form-narrow">
+  <h2 class="mb-3">Create account</h2>
+  <form id="regForm" onsubmit="return false;">
+    <div class="mb-3">
+      <label class="form-label">Email</label>
+      <input name="email" type="email" class="form-control" placeholder="you@belgiumcampus.ac.za" required />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">First name</label>
+      <input name="firstName" class="form-control" />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Last name</label>
+      <input name="lastName" class="form-control" />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Password</label>
+      <input name="password" type="password" class="form-control" required />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Role</label>
+      <select name="role" class="form-select" required>
+        <option value="Student">Student</option>
+        <option value="Tutor">Tutor</option>
+      </select>
+    </div>
+    <button class="btn btn-primary w-100" onclick="doRegister()">Register</button>
+    <p id="msg" class="text-danger mt-2"></p>
+  </form>
+</div>
+
+<script>
+async function doRegister(){
+  const body = {
+    email: regForm.email.value.trim(),
+    firstName: regForm.firstName.value.trim() || null,
+    lastName: regForm.lastName.value.trim() || null,
+    password: regForm.password.value,
+    role: regForm.role.value
+  };
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) { msg.textContent = data.error || 'Registration failed'; return; }
+    window.location = '/dashboard';
+  } catch (e) { msg.textContent = e.message; }
+}
+</script>

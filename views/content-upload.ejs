@@ -1,0 +1,17 @@
+<h2>Upload content</h2>
+<form class="vstack gap-3" action="/api/content" method="post" enctype="multipart/form-data">
+  <div>
+    <label class="form-label">Attach to Topic ID</label>
+    <input class="form-control" name="topicId" placeholder="e.g. 1">
+  </div>
+  <div>
+    <label class="form-label">Or attach to Reply ID</label>
+    <input class="form-control" name="replyId" placeholder="">
+  </div>
+  <div>
+    <label class="form-label">File</label>
+    <input class="form-control" type="file" name="file" required>
+  </div>
+  <button class="btn btn-primary">Upload</button>
+</form>
+<p class="mt-3 text-muted">After upload you’ll get a JSON with Content_ID. Use /api/content/:id/download or /inline.</p>

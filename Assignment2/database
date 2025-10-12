@@ -1,94 +1,184 @@
--- Create Roles table
-CREATE TABLE Roles (
-    Role_ID INT PRIMARY KEY IDENTITY(1,1),
-    Name VARCHAR(10) NOT NULL,
-    Description VARCHAR(200)
-);
+/* ------------------------------------------------------------------
+   Clean rebuild of CampusLearn schema (safe to re-run)
+   ------------------------------------------------------------------ */
 
--- Create User table
-CREATE TABLE [User] (
-    User_ID INT PRIMARY KEY IDENTITY(1,1),
-    Role_ID INT NOT NULL,
-    Username VARCHAR(30) NOT NULL UNIQUE,
-    First_Name VARCHAR(30),
-    Last_Name VARCHAR(30),
-    Phone VARCHAR(15),
-    Email VARCHAR(50) UNIQUE,
-    Credentials VARCHAR(100),
-    DOB DATE,
-    Password VARCHAR(128) NOT NULL,
-    Status VARCHAR(10),
-    Created_On DATETIME DEFAULT GETDATE(),
-    FOREIGN KEY (Role_ID) REFERENCES Roles(Role_ID)
-);
+-- 0) Use an application DB (avoid master)
+IF DB_ID('CampusLearn') IS NULL
+    CREATE DATABASE CampusLearn;
+GO
+USE CampusLearn;
+GO
 
--- Create Modules table
-CREATE TABLE Modules (
-    Module_ID INT PRIMARY KEY IDENTITY(1,1),
-    Name VARCHAR(10) NOT NULL,
-    Description VARCHAR(200)
-);
+/* Drop in child→parent order (ignore if missing) */
+IF OBJECT_ID('dbo.Content',         'U') IS NOT NULL DROP TABLE dbo.Content;
+IF OBJECT_ID('dbo.Reply',           'U') IS NOT NULL DROP TABLE dbo.Reply;
+IF OBJECT_ID('dbo.TopicSubscriber', 'U') IS NOT NULL DROP TABLE dbo.TopicSubscriber;
+IF OBJECT_ID('dbo.TutorSubscriber', 'U') IS NOT NULL DROP TABLE dbo.TutorSubscriber;
+IF OBJECT_ID('dbo.UserModule',      'U') IS NOT NULL DROP TABLE dbo.UserModule;
+IF OBJECT_ID('dbo.Topic',           'U') IS NOT NULL DROP TABLE dbo.Topic;
+IF OBJECT_ID('dbo.[User]',          'U') IS NOT NULL DROP TABLE dbo.[User];
+IF OBJECT_ID('dbo.Modules',         'U') IS NOT NULL DROP TABLE dbo.Modules;
+IF OBJECT_ID('dbo.Roles',           'U') IS NOT NULL DROP TABLE dbo.Roles;
+GO
 
--- Create Topic table
-CREATE TABLE Topic (
-    Topic_ID INT PRIMARY KEY IDENTITY(1,1),
-    User_ID INT NOT NULL,
+/* ------------------------- Roles ------------------------- */
+CREATE TABLE dbo.Roles
+(
+    Role_ID       INT IDENTITY(1,1) PRIMARY KEY,
+    [Name]        VARCHAR(10)   NOT NULL,       -- Student | Tutor | Admin
+    [Description] VARCHAR(200)  NULL,
+    CONSTRAINT UQ_Roles_Name UNIQUE ([Name])
+);
+GO
+
+/* -------------------------- User ------------------------- */
+CREATE TABLE dbo.[User]
+(
+    User_ID     INT IDENTITY(1,1) PRIMARY KEY,
+    Role_ID     INT           NOT NULL,
+    Username    VARCHAR(30)   NOT NULL UNIQUE,
+    First_Name  VARCHAR(30)   NULL,
+    Last_Name   VARCHAR(30)   NULL,
+    Phone       VARCHAR(20)   NULL,
+    Email       VARCHAR(50)   NOT NULL UNIQUE,
+    Credentials VARCHAR(100)  NULL,
+    DOB         DATE          NULL,
+    [Password]  VARCHAR(255)  NOT NULL,      -- bumped to 255
+    [Status]    VARCHAR(10)   NOT NULL CONSTRAINT DF_User_Status DEFAULT ('Active'),
+    Created_On  DATETIME2     NOT NULL CONSTRAINT DF_User_Created DEFAULT (SYSUTCDATETIME()),
+    -- Enforce Belgium Campus email domain
+    CONSTRAINT CK_User_EmailDomain CHECK (Email LIKE '%@belgiumcampus.ac.za'),
+    CONSTRAINT FK_User_Role FOREIGN KEY (Role_ID) REFERENCES dbo.Roles(Role_ID)
+);
+GO
+
+/* ------------------------ Modules ------------------------ */
+CREATE TABLE dbo.Modules
+(
+    Module_ID     INT IDENTITY(1,1) PRIMARY KEY,
+    [Name]        VARCHAR(20)   NOT NULL,     -- 10 felt tight; 20 safer (e.g., BIN381)
+    [Description] VARCHAR(200)  NULL,
+    CONSTRAINT UQ_Modules_Name UNIQUE ([Name])
+);
+GO
+
+/* ------------------------- Topic ------------------------- */
+CREATE TABLE dbo.Topic
+(
+    Topic_ID      INT IDENTITY(1,1) PRIMARY KEY,
+    User_ID       INT           NOT NULL,
+    Module_ID     INT           NOT NULL,
+    Title         VARCHAR(500)  NOT NULL,
+    [Description] VARCHAR(MAX)  NULL,
+    Upvotes       INT           NOT NULL CONSTRAINT DF_Topic_Up DEFAULT (0),
+    Downvotes     INT           NOT NULL CONSTRAINT DF_Topic_Down DEFAULT (0),
+    Created_At    DATETIME2     NOT NULL CONSTRAINT DF_Topic_Created DEFAULT (SYSUTCDATETIME()),
+    Updated_At    DATETIME2     NULL,
+    CONSTRAINT FK_Topic_User   FOREIGN KEY (User_ID)   REFERENCES dbo.[User](User_ID)   ON DELETE CASCADE,
+    CONSTRAINT FK_Topic_Module FOREIGN KEY (Module_ID) REFERENCES dbo.Modules(Module_ID),
+    CONSTRAINT CK_Topic_Votes CHECK (Upvotes >= 0 AND Downvotes >= 0)
+);
+GO
+
+/* ------------------------- Reply ------------------------- */
+CREATE TABLE dbo.Reply
+(
+    Reply_ID        INT IDENTITY(1,1) PRIMARY KEY,
+    Topic_ID        INT           NOT NULL,
+    Parent_Reply_ID INT           NULL,
+    User_ID         INT           NOT NULL,
+    [Description]   VARCHAR(MAX)  NULL,
+    Upvote          INT           NOT NULL CONSTRAINT DF_Reply_Up DEFAULT (0),
+    Downvote        INT           NOT NULL CONSTRAINT DF_Reply_Down DEFAULT (0),
+    Created_At      DATETIME2     NOT NULL CONSTRAINT DF_Reply_Created DEFAULT (SYSUTCDATETIME()),
+    Updated_At      DATETIME2     NULL,
+    CONSTRAINT FK_Reply_Topic  FOREIGN KEY (Topic_ID)        REFERENCES dbo.Topic(Topic_ID) ON DELETE CASCADE,
+    CONSTRAINT FK_Reply_Parent FOREIGN KEY (Parent_Reply_ID) REFERENCES dbo.Reply(Reply_ID),
+    CONSTRAINT FK_Reply_User   FOREIGN KEY (User_ID)         REFERENCES dbo.[User](User_ID),
+    CONSTRAINT CK_Reply_Votes  CHECK (Upvote >= 0 AND Downvote >= 0),
+    CONSTRAINT CK_Reply_NoSelfParent CHECK (Parent_Reply_ID IS NULL OR Parent_Reply_ID <> Reply_ID)
+);
+GO
+
+/* ------------------------ Content ------------------------ */
+CREATE TABLE dbo.Content
+(
+    Content_ID  INT IDENTITY(1,1) PRIMARY KEY,
+    Reply_ID    INT NULL,
+    Topic_ID    INT NULL,
+    [Path]      VARCHAR(300) NOT NULL,
+    Created_At  DATETIME2    NOT NULL CONSTRAINT DF_Content_Created DEFAULT (SYSUTCDATETIME()),
+    CONSTRAINT FK_Content_Reply FOREIGN KEY (Reply_ID) REFERENCES dbo.Reply(Reply_ID) ON DELETE CASCADE,
+    CONSTRAINT FK_Content_Topic FOREIGN KEY (Topic_ID) REFERENCES dbo.Topic(Topic_ID) ON DELETE CASCADE,
+    CONSTRAINT CK_Content_AtLeastOneRef CHECK (Reply_ID IS NOT NULL OR Topic_ID IS NOT NULL)
+);
+GO
+
+/* ---------------------- UserModule ----------------------- */
+CREATE TABLE dbo.UserModule
+(
     Module_ID INT NOT NULL,
-    Title VARCHAR(500) NOT NULL,
-    Description VARCHAR(8000),
-    Upvotes INT DEFAULT 0,
-    Downvotes INT DEFAULT 0,
-    FOREIGN KEY (User_ID) REFERENCES [User](User_ID),
-    FOREIGN KEY (Module_ID) REFERENCES Modules(Module_ID)
+    User_ID   INT NOT NULL,
+    CONSTRAINT PK_UserModule PRIMARY KEY (Module_ID, User_ID),
+    CONSTRAINT FK_UserModule_Module FOREIGN KEY (Module_ID) REFERENCES dbo.Modules(Module_ID),
+    CONSTRAINT FK_UserModule_User   FOREIGN KEY (User_ID)   REFERENCES dbo.[User](User_ID)
 );
+GO
 
--- Create Reply table
-CREATE TABLE Reply (
-    Reply_ID INT PRIMARY KEY IDENTITY(1,1),
+/* -------------------- TopicSubscriber -------------------- */
+CREATE TABLE dbo.TopicSubscriber
+(
     Topic_ID INT NOT NULL,
-    Parent_Reply_ID INT NULL,
-    User_ID INT NOT NULL,
-    Description VARCHAR(8000),
-    Upvote INT DEFAULT 0,
-    Downvote INT DEFAULT 0,
-    FOREIGN KEY (Topic_ID) REFERENCES Topic(Topic_ID),
-    FOREIGN KEY (Parent_Reply_ID) REFERENCES Reply(Reply_ID),
-    FOREIGN KEY (User_ID) REFERENCES [User](User_ID)
+    User_ID  INT NOT NULL,
+    Created_At DATETIME2 NOT NULL CONSTRAINT DF_TopicSub_Created DEFAULT (SYSUTCDATETIME()),
+    CONSTRAINT PK_TopicSubscriber PRIMARY KEY (Topic_ID, User_ID),
+    CONSTRAINT FK_TopicSubscriber_Topic FOREIGN KEY (Topic_ID) REFERENCES dbo.Topic(Topic_ID) ON DELETE CASCADE,
+    CONSTRAINT FK_TopicSubscriber_User  FOREIGN KEY (User_ID)  REFERENCES dbo.[User](User_ID)
 );
+GO
 
--- Create Content table
-CREATE TABLE Content (
-    Content_ID INT PRIMARY KEY IDENTITY(1,1),
-    Reply_ID INT NULL,
-    Topic_ID INT NULL,
-    Path VARCHAR(300) NOT NULL,
-    FOREIGN KEY (Reply_ID) REFERENCES Reply(Reply_ID),
-    FOREIGN KEY (Topic_ID) REFERENCES Topic(Topic_ID)
+/* -------------------- TutorSubscriber -------------------- */
+CREATE TABLE dbo.TutorSubscriber
+(
+    Tutor_ID   INT NOT NULL,   -- must be role Tutor
+    Student_ID INT NOT NULL,   -- must be role Student
+    Created_At DATETIME2 NOT NULL CONSTRAINT DF_TutorSub_Created DEFAULT (SYSUTCDATETIME()),
+    CONSTRAINT PK_TutorSubscriber PRIMARY KEY (Tutor_ID, Student_ID),
+    CONSTRAINT FK_TutorSubscriber_Tutor   FOREIGN KEY (Tutor_ID)   REFERENCES dbo.[User](User_ID),
+    CONSTRAINT FK_TutorSubscriber_Student FOREIGN KEY (Student_ID) REFERENCES dbo.[User](User_ID),
+    CONSTRAINT CK_TutorStudent_NotEqual CHECK (Tutor_ID <> Student_ID)
 );
+GO
 
--- Create UserModule table
-CREATE TABLE UserModule (
-    Module_ID INT NOT NULL,
-    User_ID INT NOT NULL,
-    PRIMARY KEY (Module_ID, User_ID),
-    FOREIGN KEY (Module_ID) REFERENCES Modules(Module_ID),
-    FOREIGN KEY (User_ID) REFERENCES [User](User_ID)
-);
+/* -------- Helpful indexes on foreign keys (performance) -- */
+CREATE INDEX IX_User_Role               ON dbo.[User](Role_ID);
+CREATE INDEX IX_Topic_User              ON dbo.Topic(User_ID);
+CREATE INDEX IX_Topic_Module            ON dbo.Topic(Module_ID);
+CREATE INDEX IX_Reply_Topic             ON dbo.Reply(Topic_ID);
+CREATE INDEX IX_Reply_Parent            ON dbo.Reply(Parent_Reply_ID);
+CREATE INDEX IX_Reply_User              ON dbo.Reply(User_ID);
+CREATE INDEX IX_Content_Reply           ON dbo.Content(Reply_ID);
+CREATE INDEX IX_Content_Topic           ON dbo.Content(Topic_ID);
+CREATE INDEX IX_UserModule_User         ON dbo.UserModule(User_ID);
+CREATE INDEX IX_TopicSubscriber_User    ON dbo.TopicSubscriber(User_ID);
+CREATE INDEX IX_TutorSubscriber_Student ON dbo.TutorSubscriber(Student_ID);
+CREATE INDEX IX_User_Email              ON dbo.[User](Email);
+CREATE INDEX IX_User_Username           ON dbo.[User](Username);
+GO
 
--- Create TopicSubscriber table
-CREATE TABLE TopicSubscriber (
-    Topic_ID INT NOT NULL,
-    User_ID INT NOT NULL,
-    PRIMARY KEY (Topic_ID, User_ID),
-    FOREIGN KEY (Topic_ID) REFERENCES Topic(Topic_ID),
-    FOREIGN KEY (User_ID) REFERENCES [User](User_ID)
-);
+/* ------------------------- Seed data --------------------- */
+IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE [Name] = 'Student')
+  INSERT dbo.Roles([Name],[Description]) VALUES ('Student','Learner');
+IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE [Name] = 'Tutor')
+  INSERT dbo.Roles([Name],[Description]) VALUES ('Tutor','Peer tutor');
+IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE [Name] = 'Admin')
+  INSERT dbo.Roles([Name],[Description]) VALUES ('Admin','Administrator');
 
--- Create TutorSubscriber table
-CREATE TABLE TutorSubscriber (
-    Tutor_ID INT NOT NULL,
-    Student_ID INT NOT NULL,
-    PRIMARY KEY (Tutor_ID, Student_ID),
-    FOREIGN KEY (Tutor_ID) REFERENCES [User](User_ID),
-    FOREIGN KEY (Student_ID) REFERENCES [User](User_ID)
-);
+-- Common module codes (adjust as needed)
+IF NOT EXISTS (SELECT 1 FROM dbo.Modules WHERE [Name] = 'SEN381')
+  INSERT dbo.Modules([Name],[Description]) VALUES ('SEN381','Software Engineering');
+IF NOT EXISTS (SELECT 1 FROM dbo.Modules WHERE [Name] = 'DBD381')
+  INSERT dbo.Modules([Name],[Description]) VALUES ('DBD381','Distributed Databases');
+IF NOT EXISTS (SELECT 1 FROM dbo.Modules WHERE [Name] = 'BIN381')
+  INSERT dbo.Modules([Name],[Description]) VALUES ('BIN381','Business Intelligence');
+GO

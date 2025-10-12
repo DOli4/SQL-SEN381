@@ -1,1 +1,0 @@
-UPDATE dbo.Roles SET Name='$(RoleName)', Description='$(RoleDesc)' WHERE Role_ID=$(RoleID); SELECT @@ROWCOUNT AS rowsAffected;

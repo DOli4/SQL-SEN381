@@ -1,1 +1,0 @@
-INSERT dbo.Roles(Name, Description) VALUES('$(RoleName)', '$(RoleDesc)'); SELECT SCOPE_IDENTITY() AS NewRole_ID;
