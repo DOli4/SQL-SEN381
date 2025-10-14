@@ -1,0 +1,24 @@
+<h1 class="mb-3">Edit Topic</h1>
+
+<form id="editForm" class="vstack gap-3">
+  <div>
+    <label class="form-label">Title</label>
+    <input class="form-control" name="title" required maxlength="500">
+  </div>
+  <div>
+    <label class="form-label">Module ID</label>
+    <input class="form-control" name="moduleId" type="number" required>
+  </div>
+  <div>
+    <label class="form-label">Content</label>
+    <textarea class="form-control" name="description" rows="5"></textarea>
+  </div>
+  <button class="btn btn-primary" type="submit">Save</button>
+  <a class="btn btn-outline-secondary" href="/forum/<%= topicId %>">Cancel</a>
+  <p id="msg" class="mt-2"></p>
+</form>
+
+<script>
+  const topicId = <%- JSON.stringify(topicId) %>;
+</script>
+<script type="module" src="/topic-edit.js"></script>

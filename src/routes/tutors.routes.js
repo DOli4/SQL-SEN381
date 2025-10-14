@@ -1,10 +1,9 @@
 import { Router } from 'express';
-import auth from '../middleware/auth.js';
-import allowRoles from '../middleware/rbac.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/', auth(true), allowRoles('Admin'), async (req, res) => {
+router.get('/', requireAuth, requireRole('Admin'), async (req, res) => {
   res.json({ ok: true, message: 'Tutors endpoint stub' });
 });
 

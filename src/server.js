@@ -1,4 +1,3 @@
-// src/server.js
 import path from 'node:path';
 import express from 'express';
 import expressLayouts from 'express-ejs-layouts';
@@ -7,10 +6,26 @@ import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
 import bodyParser from "body-parser";
 
-// Load env first
 dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
 
-// Create the app BEFORE any app.use(...)
+import { attachUser, requireAuth } from './middleware/auth.js';
+import { getPool } from './db/mssql.js';
+
+// page routers you already had
+import crudRoutes from './crud.js';
+import editorRoutes from './editor.js';
+import diagRoutes from './diag.js';
+
+// API routers
+import authRoutes from './routes/auth.routes.js';
+import topicsRoutes from './routes/topics.routes.js';
+import studentsRoutes from './routes/students.routes.js';
+import tutorsRoutes from './routes/tutors.routes.js';
+import resourcesRoutes from './routes/resources.routes.js';
+import messagesRoutes from './routes/messages.routes.js';
+import repliesRoutes from './routes/replies.routes.js';
+import contentRoutes from './routes/content.routes.js'; // <<< one import
+
 const app = express();
 
 // View engine (EJS)
@@ -42,66 +57,46 @@ app.use((req, res, next) => {
   }
   next();
 });
+// attach req.user / res.locals.user from JWT
+app.use(attachUser);
 
-//Health routes
-app.get('/_ping', (req,res)=>res.send('OK'));
+// view engine
+app.set('view engine', 'ejs');
+app.set('views', path.resolve(process.cwd(), 'views'));
+app.use(expressLayouts);
+app.set('layout', 'layout');
 
-import { getPool } from './db/mssql.js';
+// health/db
+app.get('/_ping', (req, res) => res.send('OK'));
 app.get('/db-test', async (req, res) => {
   try {
     const pool = await getPool();
-    const r = await pool.request().query('SELECT DB_NAME() AS Db, GETDATE() AS Now');
-    res.json(r.recordset[0]); // {Db, Now}
+    const r = await pool.request().query('SELECT DB_NAME() AS Db, SUSER_SNAME() AS Login, GETDATE() AS Now');
+    res.json(r.recordset[0]);
   } catch (e) {
-    console.error('DB TEST ERROR:', e);
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: e.message || String(e) });
   }
 });
 
-
-// App logs (optional)
-console.log(
-  'ENV → SQL_SERVER=%s | SQL_DB=%s',
-  process.env.SQL_SERVER, process.env.SQL_DB
-);
-
-// Feature routers you already had
-import crudRoutes from './crud.js';
-import editorRoutes from './editor.js';
-import diagRoutes from './diag.js';
+// page routers
 app.use('/', crudRoutes);
 app.use('/', editorRoutes);
 app.use('/', diagRoutes);
 
-// API routers
-import authRoutes from './routes/auth.routes.js';
-import topicsRoutes from './routes/topics.routes.js';
-import studentsRoutes from './routes/students.routes.js'; // make sure filename matches
-import tutorsRoutes from './routes/tutors.routes.js';
-import resourcesRoutes from './routes/resources.routes.js';
-import messagesRoutes from './routes/messages.routes.js';
-
-app.use('/api/auth', authRoutes);
-app.use('/api/topics', topicsRoutes);
-app.use('/api/students', studentsRoutes);
-app.use('/api/tutors', tutorsRoutes);
-app.use('/api/resources', resourcesRoutes);
-app.use('/api/messages', messagesRoutes);
-
-// Page guards/helpers
+// page guards
 function requireLogin(req, res, next) {
   if (!req.user) return res.redirect('/login');
   next();
 }
-function requireRole(role){
-  return (req,res,next)=> {
-    if(!req.user) return res.redirect('/login');
-    if(req.user.role !== role) return res.status(403).send('Forbidden');
+function requireRole(role) {
+  return (req, res, next) => {
+    if (!req.user) return res.redirect('/login');
+    if ((req.user.role || req.user.RoleName) !== role) return res.status(403).send('Forbidden');
     next();
   };
 }
 
-// Pages
+// pages
 app.get('/', (req, res) => res.redirect('/dashboard'));
 app.get('/login', (req, res) => res.render('auth-login'));
 app.get('/register', (req, res) => res.render('auth-register'));
@@ -109,18 +104,41 @@ app.get('/dashboard', requireLogin, (req, res) => res.render('dashboard'));
 app.get('/topics', (req, res) => res.render('topics'));
 app.get('/topics/create', requireRole('Student'), (req, res) => res.render('topic-create'));
 
-// Logout
+app.get('/forum', (req, res) => res.render('forum'));
+app.get('/forum/new', requireAuth, (req, res) => res.render('topic-new'));
+app.get('/forum/:id', requireAuth, (req, res) => res.render('topic-detail', { topicId: Number(req.params.id) }));
+app.get('/forum/:id/edit', requireAuth, (req, res) => res.render('topic-edit', { topicId: Number(req.params.id) }));
+
+// API (each mounted ONCE)
+app.use('/api/auth', authRoutes);
+app.use('/api/topics', topicsRoutes);
+app.use('/api/students', studentsRoutes);
+app.use('/api/tutors', tutorsRoutes);
+app.use('/api/resources', resourcesRoutes);
+app.use('/api/messages', messagesRoutes);
+app.use('/api/replies', repliesRoutes);
+app.use('/api', contentRoutes); // <- gives /api/topics/:id/content and /api/content/:cid/*
+
+// multer size error → clear message for test
+app.use((err, req, res, next) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'File exceeds maximum allowed size (5 MB)' });
+  }
+  next(err);
+});
+
+// last error handler
+app.use((err, req, res, next) => {
+  console.error('Request error:', err);
+  res.status(500).send('<pre>' + (err?.stack || String(err)) + '</pre>');
+});
+
+// logout
 app.post('/logout', (req, res) => {
-  res.clearCookie('token', { httpOnly: true, sameSite:'lax', secure:false });
+  res.clearCookie('token', { httpOnly: true, sameSite: 'lax', secure: false });
   res.redirect('/login');
 });
 
-// Error handler
-app.use((err, req, res, next) => {
-  console.error('Request error:', err);
-  res.status(500).send('<pre>' + (err && err.stack || String(err)) + '</pre>');
-});
-
-// Start server
+// start
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`SQL Script Web Panel running on http://localhost:${port}`));

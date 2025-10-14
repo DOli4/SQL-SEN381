@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import auth from '../middleware/auth.js';
+import { requireAuth} from '../middleware/auth.js';
 
 const router = Router();
 
-router.post('/', auth(true), async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   res.json({ ok: true, message: 'Resources upload stub' });
 });
 
