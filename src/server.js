@@ -5,6 +5,7 @@ import expressLayouts from 'express-ejs-layouts';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
+import bodyParser from "body-parser";
 
 // Load env first
 dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
@@ -18,13 +19,17 @@ app.set('views', path.resolve(process.cwd(), 'views'));
 app.use(expressLayouts);
 app.set('layout', 'layout');
 
+// Gemini route
+import geminiRoute from "./routes/geminiRoute.js";
+app.use("/", geminiRoute);
+
 // Parsers & static
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.resolve(process.cwd(), 'public')));
 
-// Attach req.user/res.locals.user from JWT cookie (must be AFTER cookieParser, BEFORE routes)
+// Attach req.user/res.locals.user from JWT cookie
 app.use((req, res, next) => {
   const t = req.cookies?.token;
   if (!t) { res.locals.user = null; return next(); }
