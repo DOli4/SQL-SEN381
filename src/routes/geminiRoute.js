@@ -1,76 +1,64 @@
-// src/routes/geminiRoute.js
 import express from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { matchIntentRuleFirst, SUGGESTIONS } from "../utils/intents.js";
+import { classifyAndExtract } from "../utils/nlu.js";
+import { getState, setVars } from "../utils/memory.js";
+import {
+  handleAskTutor, handleFindMaterial, handleUploadHelp, handleTutorHours
+} from "../services/assistant.js";
 
 const router = express.Router();
-router.get("/chatbot", (req, res) => res.render("chatbot"));
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-const TRIGGERS = {
-  tutor: [
-    "ask a tutor", "contact a tutor", "need help", "help with", "assistance", "tutor"
-  ],
-  materials: [
-    "find study material", "notes", "slides", "resources", "pdf"
-  ],
-  upload: [
-    "upload", "submit assignment", "attach file", "how do i upload"
-  ],
-  hours: [
-    "when are tutors available", "tutor availability", "office hours", "book a session"
-  ],
-};
-
-function whichIntent(text) {
-  const s = (text||"").toLowerCase();
-  const hit = (list)=> list.some(p => s.includes(p));
-  if (hit(TRIGGERS.tutor)) return "tutor";
-  if (hit(TRIGGERS.materials)) return "materials";
-  if (hit(TRIGGERS.upload)) return "upload";
-  if (hit(TRIGGERS.hours)) return "hours";
-  return "open";
-}
-
+// unified chat endpoint
 router.post("/chatbot", async (req, res) => {
+  const userId = req.user?.sub || req.ip;           // simple key
+  const msg = (req.body?.message || "").trim();
+  if (!msg) return res.json({ reply: "Say something and I’ll help!", suggestedReplies: SUGGESTIONS.fallback });
+
   try {
-    const { message="", name="", email="", module="" } = req.body || {};
-    const intent = whichIntent(message);
+    // 1) rule-first triggers
+    let intent = matchIntentRuleFirst(msg);
+    let slots = {};
 
-    // Compose a guided prompt (acts like Copilot "topic" + "variables")
-    const system = `You are CampusLearnHelper, a friendly assistant for Belgium Campus students.
-Respond clearly, step-by-step, with short paragraphs and bullet points.`;
-    let task = "";
-
-    if (intent === "tutor") {
-      task = `Student is requesting tutor help.
-Name: ${name || "Unknown"}  Email: ${email || "Unknown"}  Module: ${module || "Unknown"}
-Ask for any missing details (name/email/module/question). Then acknowledge and outline next steps.
-End with: "I can log a tutor request if you'd like."`;
-    } else if (intent === "materials") {
-      task = `Student needs study material for ${module || "an unspecified module"}.
-Explain where to find materials in CampusLearn: Courses → Module → Resources (PDFs/slides/links). Ask a quick clarifier if module missing.`;
-    } else if (intent === "upload") {
-      task = `Student needs help uploading an assignment.
-Give concise steps: go to module → Assignments → Upload → choose file (PDF/DOCX/ZIP) → Submit.
-Mention common errors and how to fix.`;
-    } else if (intent === "hours") {
-      task = `Provide a generic mock schedule:
-- Monday–Friday: 09:00–16:00
-- Tutors reachable via CampusLearn chat or email during these hours.
-Invite the student to share preferred time.`;
-    } else {
-      task = `General CampusLearn question. Answer helpfully. If unrelated to CampusLearn, say so briefly and ask a clarifying question.`;
+    // 2) if unknown, ask the LLM to classify & extract variables
+    if (!intent) {
+      const nlu = await classifyAndExtract(msg);
+      intent = nlu.intent || "unknown";
+      slots = nlu.slots || {};
+      if (slots.module) slots.module = String(slots.module).toUpperCase().trim();
     }
 
-    const prompt = `${system}\n\nUser message: "${message}"\n\n${task}`;
+    // persist slots so we can chain questions
+    setVars(userId, slots);
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-2.5-flash" });
+    // 3) route to handler
+    let payload;
+    switch (intent) {
+      case 'ask_tutor':     payload = await handleAskTutor(userId, slots); break;
+      case 'find_material': payload = await handleFindMaterial(userId, slots); break;
+      case 'upload_help':   payload = await handleUploadHelp(); break;
+      case 'tutor_hours':   payload = await handleTutorHours(); break;
 
-    const result = await model.generateContent(prompt);
-    return res.json({ reply: result.response.text(), intent });
+      default: {
+        // fallback: answer generatively, but add suggestions
+        const sys = `You are CampusLearnHelper. Be concise, step-by-step.`;
+        const r = await model.generateContent(`${sys}\nUser: ${msg}`);
+        const text = r.response.text();
+        payload = { reply: text, suggestedReplies: SUGGESTIONS.fallback };
+      }
+    }
+
+    // 4) return reply + suggestions
+    return res.json(payload);
+
   } catch (err) {
-    console.error("Gemini error:", err);
-    return res.status(500).json({ error: "Gemini API call failed" });
+    console.error("BOT ERROR:", err);
+    return res.status(500).json({
+      reply: "Sorry—something went wrong on my side.",
+      suggestedReplies: SUGGESTIONS.fallback
+    });
   }
 });
 

@@ -1,7 +1,6 @@
 <% pageClass = 'theme-dark' %>
 
 <main class="cl-root">
-
   <!-- Header -->
   <header class="cl-header">
     <div class="cl-brand">
@@ -45,42 +44,80 @@
 </main>
 
 <script>
-  const log = document.getElementById("log");
+  const log   = document.getElementById("log");
   const input = document.getElementById("userMessage");
+  const form  = document.getElementById("chatForm");
 
-  const addMsg = (who, text) => {
+  // simple message helper
+  function addMsg(who, text) {
     const li = document.createElement("li");
     li.className = who === "you" ? "cl-msg you" : "cl-msg bot";
-    li.innerHTML = `<div class="cl-bubble">${(text||"").replace(/\n/g,"<br>")}</div>`;
+    li.innerHTML = `<div class="cl-bubble">${(text || "").replace(/\n/g,"<br>")}</div>`;
     log.appendChild(li);
     log.parentElement.scrollTop = log.parentElement.scrollHeight;
-  };
+  }
 
-  document.querySelectorAll(".cl-card").forEach(btn =>
+  // quick cards click → submit
+  document.querySelectorAll(".cl-card").forEach(btn => {
     btn.addEventListener("click", () => {
       input.value = btn.dataset.msg;
-      document.getElementById("chatForm").dispatchEvent(new Event("submit"));
-    })
-  );
+      form.dispatchEvent(new Event("submit", { cancelable: true }));
+    });
+  });
 
-  document.getElementById("chatForm").addEventListener("submit", async (e) => {
+  // suggested replies container + renderer
+  const suggContainer = document.createElement("div");
+  suggContainer.id = "suggested";
+  suggContainer.style.marginTop = "10px";
+
+  function showSuggestions(arr = []) {
+    suggContainer.innerHTML = "";
+    arr.forEach(label => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn btn-sm btn-outline-light me-2 mb-2";
+      b.textContent = label;
+      b.onclick = () => {
+        input.value = label;
+        form.dispatchEvent(new Event("submit", { cancelable: true }));
+      };
+      suggContainer.appendChild(b);
+    });
+    // place suggestions under the chat panel
+    log.parentElement.after(suggContainer);
+  }
+
+  // submit → call backend
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const message = input.value.trim();
     if (!message) return;
+
     addMsg("you", message);
     input.value = "";
+    showSuggestions([]); // clear while loading
 
     try {
-      const res = await fetch("/chatbot", {
+      const res  = await fetch("/chatbot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message })
       });
+
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      if (!res.ok || data.error) throw new Error(data.error || "Request failed");
+
       addMsg("bot", data.reply);
-    } catch {
+      showSuggestions(data.suggestedReplies || []);
+
+    } catch (err) {
       addMsg("bot", "Sorry—something went wrong. Please try again.");
+      showSuggestions([
+        "Ask a tutor",
+        "Find study material",
+        "How do I upload an assignment?"
+      ]);
+      console.error(err);
     }
   });
 
