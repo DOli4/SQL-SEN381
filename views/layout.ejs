@@ -10,13 +10,13 @@
   <link rel="stylesheet" href="/style.css">
 
   <!-- Load chatbot.css only for dark chatbot page -->
-  <% if (pageClass === 'theme-dark') { %>
+  <% if (locals.pageClass === 'theme-dark') { %>
     <link rel="stylesheet" href="/chatbot.css">
   <% } %>
 </head>
 
 <!-- Light everywhere by default; dark only when pageClass sets it -->
-<body class="<%= pageClass === 'theme-dark' ? 'theme-dark' : 'bg-body-tertiary' %>">
+<body class="<%= (locals.pageClass === 'theme-dark') ? 'theme-dark' : 'bg-body-tertiary' %>">
   <!-- Navbar (keeps Bootstrap’s default look unless theme-dark is active) -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container">
