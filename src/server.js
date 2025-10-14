@@ -34,10 +34,6 @@ app.set('views', path.resolve(process.cwd(), 'views'));
 app.use(expressLayouts);
 app.set('layout', 'layout');
 
-// Gemini route
-import geminiRoute from "./routes/geminiRoute.js";
-app.use("/", geminiRoute);
-
 // Parsers & static
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -57,8 +53,10 @@ app.use((req, res, next) => {
   }
   next();
 });
-// attach req.user / res.locals.user from JWT
-app.use(attachUser);
+
+// Gemini route
+import geminiRoute from "./routes/geminiRoute.js";
+app.use("/", geminiRoute);
 
 // view engine
 app.set('view engine', 'ejs');
