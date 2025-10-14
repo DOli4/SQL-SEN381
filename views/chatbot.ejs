@@ -1,19 +1,89 @@
-<form id="chatForm">
-  <input type="text" id="userMessage" placeholder="Ask CampusLearnHelper..." />
-  <button type="submit">Send</button>
-</form>
-<div id="response"></div>
+<% pageClass = 'theme-dark' %>
+
+<main class="cl-root">
+
+  <!-- Header -->
+  <header class="cl-header">
+    <div class="cl-brand">
+      <div class="cl-logo">💬</div>
+      <div>
+        <h1 class="cl-title">CampusLearnHelper</h1>
+        <p class="cl-sub">Created by Group B</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Input bar -->
+  <section class="cl-composer">
+    <form id="chatForm" class="cl-composer-form" aria-label="Chat input">
+      <input id="userMessage" class="cl-input" type="text"
+             placeholder="Message Copilot" autocomplete="off" />
+      <button class="cl-send" type="submit">Send</button>
+    </form>
+  </section>
+
+  <!-- Quick actions -->
+  <section class="cl-quick">
+    <button class="cl-card" data-msg="Ask a tutor">
+      <span class="cl-card-title">Ask a Tutor</span>
+      <span class="cl-card-desc">I need help understanding a topic in SEN381.</span>
+    </button>
+    <button class="cl-card" data-msg="Find study material">
+      <span class="cl-card-title">Find Study Material</span>
+      <span class="cl-card-desc">Show me the notes for Database Systems.</span>
+    </button>
+    <button class="cl-card" data-msg="How do I upload an assignment?">
+      <span class="cl-card-title">How to Upload Content</span>
+      <span class="cl-card-desc">How do I upload a PDF or assignment on CampusLearn?</span>
+    </button>
+  </section>
+
+  <!-- Chat log -->
+  <section class="cl-chat" aria-live="polite">
+    <ul id="log" class="cl-log"></ul>
+  </section>
+</main>
 
 <script>
+  const log = document.getElementById("log");
+  const input = document.getElementById("userMessage");
+
+  const addMsg = (who, text) => {
+    const li = document.createElement("li");
+    li.className = who === "you" ? "cl-msg you" : "cl-msg bot";
+    li.innerHTML = `<div class="cl-bubble">${(text||"").replace(/\n/g,"<br>")}</div>`;
+    log.appendChild(li);
+    log.parentElement.scrollTop = log.parentElement.scrollHeight;
+  };
+
+  document.querySelectorAll(".cl-card").forEach(btn =>
+    btn.addEventListener("click", () => {
+      input.value = btn.dataset.msg;
+      document.getElementById("chatForm").dispatchEvent(new Event("submit"));
+    })
+  );
+
   document.getElementById("chatForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const message = document.getElementById("userMessage").value;
-    const res = await fetch("/chatbot", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
-    });
-    const data = await res.json();
-    document.getElementById("response").innerText = data.reply;
+    const message = input.value.trim();
+    if (!message) return;
+    addMsg("you", message);
+    input.value = "";
+
+    try {
+      const res = await fetch("/chatbot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      addMsg("bot", data.reply);
+    } catch {
+      addMsg("bot", "Sorry—something went wrong. Please try again.");
+    }
   });
+
+  // focus on load
+  input.focus();
 </script>
