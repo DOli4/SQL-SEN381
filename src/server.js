@@ -3,6 +3,8 @@ import express from 'express';
 import expressLayouts from 'express-ejs-layouts';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
+import jwt from 'jsonwebtoken';
+import bodyParser from "body-parser";
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
 
@@ -29,14 +31,35 @@ app.use('/api', subsRouter)
 
 const app = express();
 
-// parsers & static
+// View engine (EJS)
+app.set('view engine', 'ejs');
+app.set('views', path.resolve(process.cwd(), 'views'));
+app.use(expressLayouts);
+app.set('layout', 'layout');
+
+// Parsers & static
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.resolve(process.cwd(), 'public')));
 
-// attach req.user / res.locals.user from JWT
-app.use(attachUser);
+// Attach req.user/res.locals.user from JWT cookie
+app.use((req, res, next) => {
+  const t = req.cookies?.token;
+  if (!t) { res.locals.user = null; return next(); }
+  try {
+    const payload = jwt.verify(t, process.env.JWT_SECRET);
+    req.user = payload;          // { sub, email, name, role }
+    res.locals.user = payload;   // usable in EJS: <%= user?.name %>
+  } catch {
+    res.locals.user = null;
+  }
+  next();
+});
+
+// Gemini route
+import geminiRoute from "./routes/geminiRoute.js";
+app.use("/", geminiRoute);
 
 // view engine
 app.set('view engine', 'ejs');
