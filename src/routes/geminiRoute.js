@@ -1,86 +1,50 @@
-// src/routes/chatbot.js  (or geminiRoute.js)
 import express from "express";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { matchIntentRuleFirst, SUGGESTIONS } from "../utils/intents.js";
-import { classifyAndExtract } from "../utils/nlu.js";
-import { setVars } from "../utils/memory.js";
-import {
-  handleAskTutor,
-  handleFindMaterial,
-  handleUploadHelp,
-  handleTutorHours,
-} from "../services/assistant.js";
+import { answerWithRAG } from "../services/assistant.js";
+import { countDocs } from "../utils/vstore.js";
+import { geminiHealthCheck } from "../services/providers/gemini.js";
 
 const router = express.Router();
 
-// Page: GET /chatbot
-router.get("/chatbot", (req, res) => {
-  res.locals.pageClass = "theme-dark";     // make layout dark just for this page
-  return res.render("chatbot");            // views/chatbot.ejs
+// Safety: ensure JSON parsing even if server order changes
+router.use(express.json());
+
+// Health endpoints
+router.get("/ping", async (_req, res) => {
+  try {
+    const hc = await geminiHealthCheck();
+    res.json({ ok: true, ...hc });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
+  }
 });
 
-// Gemini client
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-// API: POST /chatbot  (unified chat endpoint)
-router.post("/chatbot", async (req, res) => {
-  const userId = req.user?.sub || req.ip;
-  const msg = (req.body?.message || "").trim();
-  if (!msg) {
-    return res.json({
-      reply: "Say something and I’ll help!",
-      suggestedReplies: SUGGESTIONS.fallback,
-    });
-  }
-
+router.get("/status", async (_req, res) => {
   try {
-    // 1) rule-first intent
-    let intent = matchIntentRuleFirst(msg);
-    let slots = {};
+    res.json({ chunks: countDocs(), ...(await geminiHealthCheck()) });
+  } catch (e) {
+    res.status(500).json({ error: String(e?.message || e) });
+  }
+});
 
-    // 2) LLM backstop for intent + slot extraction
-    if (!intent) {
-      const nlu = await classifyAndExtract(msg);
-      intent = nlu.intent || "unknown";
-      slots = nlu.slots || {};
-      if (slots.module) slots.module = String(slots.module).toUpperCase().trim();
+// Chat
+router.post("/chat", async (req, res) => {
+  try {
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
+    const message = (body.message ?? "").toString().trim();
+
+    if (!message) {
+      return res.status(400).json({ error: "message field is required" });
     }
 
-    // keep extracted vars
-    setVars(userId, slots);
-
-    // 3) route to handler
-    let payload;
-    switch (intent) {
-      case "ask_tutor":
-        payload = await handleAskTutor(userId, slots);
-        break;
-      case "find_material":
-        payload = await handleFindMaterial(userId, slots);
-        break;
-      case "upload_help":
-        payload = await handleUploadHelp();
-        break;
-      case "tutor_hours":
-        payload = await handleTutorHours();
-        break;
-      default: {
-        // generative fallback
-        const sys = `You are CampusLearnHelper. Be concise, step-by-step.`;
-        const r = await model.generateContent(`${sys}\nUser: ${msg}`);
-        const text = r.response.text();
-        payload = { reply: text, suggestedReplies: SUGGESTIONS.fallback };
-      }
-    }
-
-    return res.json(payload);
+    const { text, sources, debug } = await answerWithRAG(message);
+    res.json({ reply: text, sources, debug });
   } catch (err) {
-    console.error("BOT ERROR:", err);
-    return res.status(500).json({
-      reply: "Sorry—something went wrong on my side.",
-      suggestedReplies: SUGGESTIONS.fallback,
-    });
+    console.error("[Gemini Chat] Error:", err?.response ?? err);
+    const msg = err?.message || "Something went wrong while contacting Gemini.";
+    if (process.env.NODE_ENV !== "production") {
+      return res.status(500).json({ error: msg, stack: String(err?.stack || err) });
+    }
+    res.status(500).json({ error: "Something went wrong while contacting Gemini." });
   }
 });
 

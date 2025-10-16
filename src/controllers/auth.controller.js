@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { getPool, sql } from '../db/mssql.js';
+// 🔧 FIXED PATH: utils now lives under services/utils/
 import { signUser } from '../utils/jwt.js';
 
 async function getRoleId(pool, roleName) {
@@ -52,7 +53,7 @@ export async function register(req, res) {
 
     return res
       .cookie('token', token, {
-        httpOnly: true, sameSite: 'lax', secure: false, maxAge: 24*60*60*1000
+        httpOnly: true, sameSite: 'lax', secure: false, maxAge: 24 * 60 * 60 * 1000
       })
       .status(201)
       .json({
@@ -99,7 +100,7 @@ export async function login(req, res) {
 
     return res
       .cookie('token', token, {
-        httpOnly: true, sameSite: 'lax', secure: false, maxAge: 24*60*60*1000
+        httpOnly: true, sameSite: 'lax', secure: false, maxAge: 24 * 60 * 60 * 1000
       })
       .json({
         token,
