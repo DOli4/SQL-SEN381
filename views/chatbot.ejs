@@ -1,5 +1,6 @@
 <% pageClass = 'theme-dark' %>
 
+
 <main class="cl-root">
   <!-- Header -->
   <header class="cl-header">
@@ -14,8 +15,13 @@
   <!-- Input bar -->
   <section class="cl-composer">
     <form id="chatForm" class="cl-composer-form" aria-label="Chat input">
-      <input id="userMessage" class="cl-input" type="text"
-             placeholder="Message CampuesLearnHelper" autocomplete="off" />
+      <input
+        id="userMessage"
+        class="cl-input"
+        type="text"
+        placeholder="Message CampusLearnHelper"
+        autocomplete="off"
+      />
       <button class="cl-send" type="submit">Send</button>
     </form>
   </section>
@@ -47,16 +53,22 @@
   const input = document.getElementById("userMessage");
   const form  = document.getElementById("chatForm");
 
-  // simple message helper
-  function addMsg(who, text) {
-    const li = document.createElement("li");
-    li.className = who === "you" ? "cl-msg you" : "cl-msg bot";
-    li.innerHTML = `<div class="cl-bubble">${(text || "").replace(/\n/g,"<br>")}</div>`;
-    log.appendChild(li);
-    log.parentElement.scrollTop = log.parentElement.scrollHeight;
+  function escapeHtml(s) {
+    return (s || "").replace(/[&<>"']/g, c =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  // quick cards click → submit
+  // Add message bubble
+  function addMsg(who, html) {
+    const li = document.createElement("li");
+    li.className = who === "you" ? "cl-msg you" : "cl-msg bot";
+    li.innerHTML = `<div class="cl-bubble">${html}</div>`;
+    log.appendChild(li);
+    log.parentElement.scrollTop = log.parentElement.scrollHeight;
+    return li.querySelector(".cl-bubble");
+  }
+
+  // Quick cards → submit
   document.querySelectorAll(".cl-card").forEach(btn => {
     btn.addEventListener("click", () => {
       input.value = btn.dataset.msg;
@@ -64,13 +76,14 @@
     });
   });
 
-  // suggested replies container + renderer
-  const suggContainer = document.createElement("div");
-  suggContainer.id = "suggested";
-  suggContainer.style.marginTop = "10px";
+  // Suggested replies under the chat
+  const sugg = document.createElement("div");
+  sugg.id = "suggested";
+  sugg.style.marginTop = "10px";
+  log.parentElement.after(sugg);
 
   function showSuggestions(arr = []) {
-    suggContainer.innerHTML = "";
+    sugg.innerHTML = "";
     arr.forEach(label => {
       const b = document.createElement("button");
       b.type = "button";
@@ -80,24 +93,24 @@
         input.value = label;
         form.dispatchEvent(new Event("submit", { cancelable: true }));
       };
-      suggContainer.appendChild(b);
+      sugg.appendChild(b);
     });
-    // place suggestions under the chat panel
-    log.parentElement.after(suggContainer);
   }
 
-  // submit → call backend
+  // Submit → call Gemini API
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const message = input.value.trim();
     if (!message) return;
 
-    addMsg("you", message);
+    addMsg("you", escapeHtml(message));
     input.value = "";
-    showSuggestions([]); // clear while loading
+    showSuggestions([]);
+
+    const bubble = addMsg("bot", "Thinking…");
 
     try {
-      const res  = await fetch("/chatbot", {
+      const res = await fetch("/api/gemini/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message })
@@ -106,11 +119,23 @@
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "Request failed");
 
-      addMsg("bot", data.reply);
+      // Render reply
+      const safeReply = escapeHtml(data.reply || "").replace(/\n/g, "<br>");
+      bubble.innerHTML = safeReply;
+
+      // Append sources (if returned)
+      if (data.sources) {
+        const src = document.createElement("div");
+        src.className = "cl-sources";
+        src.textContent = data.sources;
+        bubble.appendChild(src);
+      }
+
+      // Optional buttons for follow-ups
       showSuggestions(data.suggestedReplies || []);
 
     } catch (err) {
-      addMsg("bot", "Sorry—something went wrong. Please try again.");
+      bubble.textContent = "Sorry—something went wrong. Please try again.";
       showSuggestions([
         "Ask a tutor",
         "Find study material",
@@ -120,6 +145,5 @@
     }
   });
 
-  // focus on load
   input.focus();
 </script>

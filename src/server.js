@@ -89,6 +89,8 @@ app.get('/', (req, res) => res.redirect('/dashboard'));
 app.get('/login', (req, res) => res.render('auth-login'));
 app.get('/register', (req, res) => res.render('auth-register'));
 app.get('/dashboard', requireLogin, (req, res) => res.render('dashboard'));
+// Chatbot page (renders chatbot.ejs)
+app.get('/chatbot', (req, res) => res.render('chatbot', { pageClass: 'theme-dark' }));
 app.get('/topics', (req, res) => res.render('topics'));
 app.get('/topics/create', requireRole('Student'), (req, res) => res.render('topic-create'));
 app.get('/forum', (req, res) => res.render('forum'));
