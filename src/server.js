@@ -42,6 +42,11 @@ import repliesRoutes from './routes/replies.routes.js';
 import contentRoutes from './routes/content.routes.js';
 import subsRouter from './routes/subscriptions.routes.js';
 import geminiRoute from "./routes/geminiRoute.js"; // Gemini API
+import { reloadFromDisk } from "./utils/vstore.js";
+const docsCount = reloadFromDisk();
+console.log(`[vstore] Loaded ${docsCount} chunks into memory.`);
+
+
 
 // Attach req.user/res.locals.user from JWT cookie (kept from your file)
 app.use((req, res, next) => {
