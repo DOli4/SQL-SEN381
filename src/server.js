@@ -111,6 +111,53 @@ app.get('/forum/new', requireAuth, (req, res) => res.render('topic-new'));
 app.get('/forum/:id', requireAuth, (req, res) => res.render('topic-detail', { topicId: Number(req.params.id) }));
 app.get('/forum/:id/edit', requireAuth, (req, res) => res.render('topic-edit', { topicId: Number(req.params.id) }));
 
+// LIST: /courses
+app.get('/courses', requireLogin, (req, res) => {
+  // demo data – replace with DB later
+  const courses = [
+    { id: 'sen381', name: 'Intro to Databases', tutor: 'Tutor Name', banner: '/images/frontPage.jpg' },
+    { id: 'wd101',  name: 'Web Dev Fundamentals', tutor: 'Tutor Name', banner: '/images/frontPage.jpg' },
+    { id: 'alg101', name: 'Algorithms 101', tutor: 'Tutor Name', banner: '/images/frontPage.jpg' },
+  ];
+  res.render('courses', { user: req.user, courses });
+});
+
+// DETAIL: /courses/:id
+app.get('/courses/:id', requireLogin, (req, res) => {
+  const course = {
+    id: req.params.id,
+    title: 'SEN381 · Intro to Software Engineering', // swap with real title from DB
+  };
+
+  // Placeholder table of contents (mock). Replace with DB data later.
+  const toc = [
+    {
+      groupId: 'w1',
+      groupTitle: 'Week 1 - Intro to Software Engineering',
+      items: [
+        { id: 'w1-1', title: '01. Introduction to Software Engineering' },
+        { id: 'w1-2', title: 'In-class Quiz · What is Software?' },
+        { id: 'w1-3', title: '02. Programming in Software Engineering' },
+        { id: 'w1-4', title: 'Homework · Predict the output' },
+        { id: 'w1-5', title: '03. Threading' },
+        { id: 'w1-6', title: '04. Socket Programming' },
+        { id: 'w1-7', title: '05. Version Control Systems' },
+      ],
+    },
+    { groupId: 'w2', groupTitle: 'Week 2 - Software Architecture', items: [
+      { id: 'w2-1', title: '01. Layers & Modules' },
+      { id: 'w2-2', title: '02. MVC & MVVM' },
+    ]},
+    { groupId: 'w3', groupTitle: 'Week 3 - UI & UX Design', items: [
+      { id: 'w3-1', title: '01. Principles of UX' },
+    ]},
+  ];
+
+  res.render('course-view', { user: req.user, course, toc });
+});
+
+
+
 // API (each mounted ONCE)
 app.use('/api/auth', authRoutes);
 app.use('/api/topics', topicsRoutes);
