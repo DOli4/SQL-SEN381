@@ -26,6 +26,7 @@ import messagesRoutes from './routes/messages.routes.js';
 import repliesRoutes from './routes/replies.routes.js';
 import contentRoutes from './routes/content.routes.js';
 import profileRoutes from './routes/profile.routes.js';
+import anonRoutes from './routes/anon.routes.js';
 
 
 const app = express();
@@ -167,6 +168,8 @@ app.use('/api/resources', resourcesRoutes);
 app.use('/api/messages', messagesRoutes);
 app.use('/api/replies', repliesRoutes);
 app.use('/api', contentRoutes); // <- gives /api/topics/:id/content and /api/content/:cid/*
+app.use('/', anonRoutes);
+
 
 // multer size error → clear message for test
 app.use((err, req, res, next) => {
