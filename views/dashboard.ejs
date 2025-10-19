@@ -1,34 +1,82 @@
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h2 class="mb-0">Dashboard</h2>
-  <div>
-    <a class="btn btn-outline-secondary btn-sm" href="/topics">View Topics</a>
-    <% if (user && user.role === 'Student') { %>
-      <a class="btn btn-primary btn-sm" href="/topics/create">New Topic</a>
-    <% } %>
-  </div>
-</div>
+<style>
+  .dashboard-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    background: url("/images/frontPage.jpg") center/cover no-repeat fixed;
+  }
+  .dashboard-content {
+    flex: 1;
+    padding: 40px 20px;
+    overflow-y: auto;
+  }
+  footer {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all .25s ease;
+  }
+  footer.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
 
-<div class="row g-3">
-  <div class="col-12 col-lg-6">
-    <div class="card card-compact">
-      <div class="card-body">
-        <h5 class="card-title">Welcome</h5>
-        <p class="mb-0">You are signed in as <strong><%= user?.name %></strong> (<%= user?.role %>).</p>
+<div class="dashboard-container">
+  <div class="dashboard-content container">
+    <!-- Your current dashboard snippet -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="mb-0">Dashboard</h2>
+      <div>
+        <a class="btn btn-outline-secondary btn-sm" href="/topics">View Topics</a>
+        <% if (user && user.role === 'Student') { %>
+          <a class="btn btn-primary btn-sm" href="/topics/create">New Topic</a>
+        <% } %>
       </div>
     </div>
-  </div>
 
-  <div class="col-12 col-lg-6">
-    <div class="card card-compact">
-      <div class="card-body">
-        <h5 class="card-title">Quick actions</h5>
-        <ul class="mb-0">
-          <li><a href="/topics">Browse topics</a></li>
-          <% if (user && user.role === 'Student') { %>
-            <li><a href="/topics/create">Create a topic</a></li>
-          <% } %>
-        </ul>
+    <div class="row g-3">
+      <div class="col-12 col-lg-6">
+        <div class="card card-compact">
+          <div class="card-body">
+            <h5 class="card-title">Welcome</h5>
+            <p class="mb-0">You are signed in as <strong><%= user?.name %></strong> (<%= user?.role %>).</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6">
+        <div class="card card-compact">
+          <div class="card-body">
+            <h5 class="card-title">Quick actions</h5>
+            <ul class="mb-0">
+              <li><a href="/topics">Browse topics</a></li>
+              <% if (user && user.role === 'Student') { %>
+                <li><a href="/topics/create">Create a topic</a></li>
+              <% } %>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
+    <!-- sentinel -->
+    <div id="footerSentinel" style="height:40px;"></div>
   </div>
+
+  <!-- Footer -->
+  <footer id="pageFooter" class="bg-light text-center py-3 border-top">
+    <small>© <%= new Date().getFullYear() %> CampusLearn | All rights reserved</small>
+  </footer>
 </div>
+
+<script>
+  const footer = document.getElementById('pageFooter');
+  const sentinel = document.getElementById('footerSentinel');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){ footer.classList.add('show'); }
+      else { footer.classList.remove('show'); }
+    });
+  });
+  io.observe(sentinel);
+</script>
