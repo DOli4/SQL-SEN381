@@ -24,7 +24,9 @@ import tutorsRoutes from './routes/tutors.routes.js';
 import resourcesRoutes from './routes/resources.routes.js';
 import messagesRoutes from './routes/messages.routes.js';
 import repliesRoutes from './routes/replies.routes.js';
-import contentRoutes from './routes/content.routes.js'; // <<< one import
+import contentRoutes from './routes/content.routes.js';
+import profileRoutes from './routes/profile.routes.js';
+
 
 const app = express();
 
@@ -80,6 +82,8 @@ app.get('/db-test', async (req, res) => {
 app.use('/', crudRoutes);
 app.use('/', editorRoutes);
 app.use('/', diagRoutes);
+app.use('/', profileRoutes);
+
 
 // page guards
 function requireLogin(req, res, next) {

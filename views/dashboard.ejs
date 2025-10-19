@@ -1,82 +1,115 @@
+<!-- views/dashboard.ejs -->
+<%- include('partials/navbar', { user }) %>
+
 <style>
-  .dashboard-container {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    background: url("/images/frontPage.jpg") center/cover no-repeat fixed;
+  :root{
+    --muted:#6b7280; --accent:#8a007a;
   }
-  .dashboard-content {
-    flex: 1;
-    padding: 40px 20px;
-    overflow-y: auto;
+  body{ background: #f5f6f8; }
+
+  .page{
+    max-width:1200px; margin:28px auto 120px; padding:0 20px;
   }
-  footer {
-    opacity: 0;
-    transform: translateY(20px);
-    transition: all .25s ease;
+  .title{ font-weight:800; font-size:34px; margin:8px 0 6px; }
+  .sub{ color:var(--muted); margin-bottom:26px; }
+
+  .actions{ display:flex; gap:10px; }
+  .btn-outline{ border:1px solid #e5e7eb; background:#fff; padding:8px 12px; border-radius:10px; text-decoration:none; color:#111; }
+  .btn-outline:hover{ background:#f9fafb; }
+  .btn-primary{ background:#2563eb; color:#fff; padding:8px 12px; border-radius:10px; text-decoration:none; }
+  .btn-primary:hover{ filter:brightness(1.05); }
+
+  /* Tiles */
+  .tiles{
+    display:grid; gap:24px;
+    grid-template-columns: repeat(3, 1fr);
   }
-  footer.show {
-    opacity: 1;
-    transform: translateY(0);
+  @media (max-width: 1020px){ .tiles{ grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 700px){ .tiles{ grid-template-columns: 1fr; } }
+
+  .tile{
+    background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:16px;
+    box-shadow:0 10px 28px rgba(0,0,0,.06);
+    min-height:170px; display:flex; align-items:center; justify-content:center;
+    text-decoration:none; color:#0f172a; font-weight:800; font-size:22px;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
   }
+  .tile:hover{ transform:translateY(-3px); box-shadow:0 18px 44px rgba(0,0,0,.10); border-color:rgba(138,0,122,.18); }
+
+  .label{ display:flex; align-items:center; gap:14px; }
+  .ico{ width:46px; height:46px; border-radius:12px; display:grid; place-items:center; font-weight:700;
+        background:linear-gradient(135deg,#fde2ff,#e0eaff); }
+
+  /* Panels below */
+  .grid-2{ display:grid; grid-template-columns: 1fr 380px; gap:24px; margin-top:26px; }
+  @media (max-width: 1020px){ .grid-2{ grid-template-columns: 1fr; } }
+  .panel{ background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.05); padding:18px; }
+  .panel h3{ margin:0 0 10px; font-size:26px; }
+
+  /* Footer reveal */
+  .footer-sentinel{ height:1px; }
+  .site-footer{ position:sticky; bottom:0; width:100%; background:#fff; border-top:1px solid rgba(0,0,0,.06);
+                box-shadow:0 -8px 26px rgba(0,0,0,.06); opacity:0; transform:translateY(16px); transition:opacity .25s, transform .25s; }
+  .site-footer.show{ opacity:1; transform:translateY(0); }
+  .footer-inner{ max-width:1200px; margin:0 auto; padding:16px 20px; display:flex; justify-content:space-between; color:#6b7280; }
+  @media (max-width:700px){ .footer-inner{ flex-direction:column; gap:6px; text-align:center; } }
 </style>
 
-<div class="dashboard-container">
-  <div class="dashboard-content container">
-    <!-- Your current dashboard snippet -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2 class="mb-0">Dashboard</h2>
-      <div>
-        <a class="btn btn-outline-secondary btn-sm" href="/topics">View Topics</a>
-        <% if (user && user.role === 'Student') { %>
-          <a class="btn btn-primary btn-sm" href="/topics/create">New Topic</a>
-        <% } %>
+<div class="page">
+  <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+    <div>
+      <div class="title">Student Dashboard</div>
+      <div class="sub">
+        Welcome <strong><%= (user && (user.firstName || user.name || user.email)) || 'Student' %></strong> — <%= user?.role || 'Student' %>.
+        Quick links below.
       </div>
     </div>
-
-    <div class="row g-3">
-      <div class="col-12 col-lg-6">
-        <div class="card card-compact">
-          <div class="card-body">
-            <h5 class="card-title">Welcome</h5>
-            <p class="mb-0">You are signed in as <strong><%= user?.name %></strong> (<%= user?.role %>).</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-12 col-lg-6">
-        <div class="card card-compact">
-          <div class="card-body">
-            <h5 class="card-title">Quick actions</h5>
-            <ul class="mb-0">
-              <li><a href="/topics">Browse topics</a></li>
-              <% if (user && user.role === 'Student') { %>
-                <li><a href="/topics/create">Create a topic</a></li>
-              <% } %>
-            </ul>
-          </div>
-        </div>
-      </div>
+    <div class="actions">
+      <a class="btn-outline" href="/topics">View Topics</a>
+      <% if (user && user.role === 'Student') { %>
+        <a class="btn-primary" href="/topics/create">New Topic</a>
+      <% } %>
     </div>
-    <!-- sentinel -->
-    <div id="footerSentinel" style="height:40px;"></div>
   </div>
 
-  <!-- Footer -->
-  <footer id="pageFooter" class="bg-light text-center py-3 border-top">
-    <small>© <%= new Date().getFullYear() %> CampusLearn | All rights reserved</small>
-  </footer>
+  <div class="tiles" role="navigation" aria-label="Quick links">
+    <a class="tile" href="/courses"><div class="label"><div class="ico">C</div>Courses</div></a>
+    <a class="tile" href="/forum"><div class="label"><div class="ico">F</div>Forum</div></a>
+    <a class="tile" href="/chatbot"><div class="label"><div class="ico">🤖</div>ChatBot</div></a>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h3>Recent activity</h3>
+      <p style="margin:0;color:#6b7280;">No recent activity yet — this area will later show recent courses, forum posts and chat logs.</p>
+    </div>
+    <div class="panel">
+      <h3 style="font-size:24px;">Shortcuts</h3>
+      <ul style="margin:0; padding-left:18px;">
+        <li><a href="/courses">Open My Courses</a></li>
+        <li><a href="/forum">Open Forum</a></li>
+        <li><a href="/chatbot">Open ChatBot</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="height:480px;"></div>
+  <div id="footerSentinel" class="footer-sentinel"></div>
 </div>
 
+<footer id="siteFooter" class="site-footer" aria-hidden="true">
+  <div class="footer-inner">
+    <div>© <%= new Date().getFullYear() %> CampusLearn</div>
+    <div><a href="https://linkedin.com" target="_blank" rel="noopener">LinkedIn</a> · <a href="https://instagram.com" target="_blank" rel="noopener">Instagram</a></div>
+    <div>support@campuslearn.example · 080 647 8723</div>
+  </div>
+</footer>
+
 <script>
-  const footer = document.getElementById('pageFooter');
+  // show footer only when bottom reached
+  const footer = document.getElementById('siteFooter');
   const sentinel = document.getElementById('footerSentinel');
-  const io = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if(entry.isIntersecting){ footer.classList.add('show'); }
-      else { footer.classList.remove('show'); }
-    });
-  });
-  io.observe(sentinel);
+  new IntersectionObserver(entries => {
+    entries.forEach(e => footer.classList.toggle('show', e.isIntersecting));
+  }, { threshold: .05 }).observe(sentinel);
 </script>
