@@ -111,7 +111,7 @@ app.get('/splash/:kind(login|register)', requireLogin, (req, res) => {
     kind,
     user: req.user,            // already set by JWT middleware
     goTo: '/dashboard',
-    delayMs: 2000
+    delayMs: 5000
   });
 });
 

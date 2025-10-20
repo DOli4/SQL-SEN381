@@ -103,12 +103,12 @@
       </div>
 
       <div class="muted">Taking you to your dashboard…</div>
-      <a class="btn" href="<%= goTo %>">Go now</a>
+      <a class="btn" href="<%= goTo %>">Home</a>
     </div>
   </div>
 </div>
 
 <script>
-  const delay = <%= Number(delayMs || 2000) %>;
+  const delay = <%= Number(delayMs) %>;
   setTimeout(() => { window.location.href = "<%= goTo %>"; }, delay);
 </script>
