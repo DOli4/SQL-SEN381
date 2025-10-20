@@ -1,0 +1,114 @@
+<%- include('partials/navbar', { user }) %>
+
+<style>
+  :root{
+    --brand:#7b0086;
+    --ink:#0f172a;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+  }
+  body{ font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif; }
+
+  .split {
+    min-height: calc(100vh - 72px);    /* minus navbar */
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+  }
+  .hero {
+    background:url("/images/frontPage.jpg") center/cover no-repeat;
+  }
+  .panel {
+    display:flex; align-items:center; justify-content:center;
+    background:#fff;
+    border-left:1px solid var(--line);
+  }
+  .card {
+    width:min(520px, 92%);
+    text-align:center;
+  }
+
+  .h1 { font-size:32px; font-weight:800; color:var(--ink); margin:0 0 10px; }
+  .h2 { font-size:20px; font-weight:700; color:var(--ink); margin:0 0 18px; }
+  .muted { color:var(--muted); font-size:14px; }
+
+  /* Avatar + ring animation */
+  .avatar-wrap {
+    width:88px; height:88px; margin:18px auto 8px; position:relative;
+  }
+  .avatar {
+    width:88px; height:88px; border-radius:50%;
+    background:linear-gradient(135deg,#f3e8ff,#e0e7ff);
+    display:grid; place-items:center; color:#444; font-size:34px; font-weight:800;
+    border:2px solid #fff; box-shadow:0 10px 24px rgba(0,0,0,.12);
+  }
+  .pulse {
+    position:absolute; inset:-6px; border-radius:50%;
+    border:3px solid rgba(123,0,134,.35);
+    animation:pulse 1.4s ease-out 2;
+  }
+  @keyframes pulse {
+    0%   { opacity:0; transform:scale(.8); }
+    25%  { opacity:1; }
+    100% { opacity:0; transform:scale(1.25); }
+  }
+
+  .btn {
+    display:inline-block; border:2px solid var(--brand); color:var(--brand);
+    border-radius:14px; padding:12px 18px; font-weight:700; text-decoration:none;
+    margin-top:18px; transition:.2s;
+  }
+  .btn:hover{ background:var(--brand); color:#fff; }
+
+  /* check badge */
+  .badge {
+    display:inline-flex; align-items:center; gap:10px;
+    padding:8px 12px; border-radius:999px; background:#f6f7fb; border:1px solid var(--line);
+    margin:0 auto 18px;
+  }
+  .check {
+    width:22px; height:22px; border-radius:50%; background:#10b981; color:#fff; font-size:16px;
+    display:grid; place-items:center;
+    box-shadow:0 0 0 6px rgba(16,185,129,.15);
+  }
+
+  @media (max-width: 900px){
+    .split{ grid-template-columns: 1fr; }
+    .hero{ height:200px; border-bottom:1px solid var(--line); }
+    .panel{ border-left:none; }
+  }
+</style>
+
+<div class="split">
+  <div class="hero"></div>
+
+  <div class="panel">
+    <div class="card">
+      <div class="badge">
+        <span class="check">✓</span>
+        <span class="muted">
+          <%= kind === 'register' ? 'Registration successful' : 'Login successful' %>
+        </span>
+      </div>
+
+      <div class="h1"><%= kind === 'register' ? 'Registration Successful' : 'Login Successful' %></div>
+      <div class="h2">
+        Welcome <%= (user?.name || user?.Username || user?.email || 'Student') %>
+      </div>
+
+      <div class="avatar-wrap">
+        <div class="pulse"></div>
+        <div class="avatar">
+          <%= (user?.name || user?.Username || 'U')[0].toUpperCase() %>
+        </div>
+      </div>
+
+      <div class="muted">Taking you to your dashboard…</div>
+      <a class="btn" href="<%= goTo %>">Go now</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const delay = <%= Number(delayMs || 2000) %>;
+  setTimeout(() => { window.location.href = "<%= goTo %>"; }, delay);
+</script>

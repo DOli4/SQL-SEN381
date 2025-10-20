@@ -103,6 +103,18 @@ function requireRole(role) {
 app.get('/', (req, res) => res.redirect('/dashboard'));
 app.get('/login', (req, res) => res.render('auth-login'));
 app.get('/register', (req, res) => res.render('auth-register'));
+
+// Splash after login/register
+app.get('/splash/:kind(login|register)', requireLogin, (req, res) => {
+  const kind = req.params.kind; // 'login' or 'register'
+  res.render('splash', {
+    kind,
+    user: req.user,            // already set by JWT middleware
+    goTo: '/dashboard',
+    delayMs: 2000
+  });
+});
+
 app.get('/dashboard', requireLogin, (req, res) => res.render('dashboard'));
 app.get('/topics', (req, res) => res.render('topics'));
 app.get('/topics/create', requireRole('Student'), (req, res) => res.render('topic-create'));

@@ -214,7 +214,7 @@
       });
       const data = await res.json();
       if(!res.ok){ msg.textContent = data.error || 'Login failed'; return; }
-      window.location = '/dashboard';
+      window.location = '/splash/login';
     }catch(e){
       msg.textContent = e.message || 'Network error';
     }
