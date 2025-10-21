@@ -1,0 +1,207 @@
+<%- include('partials/navbar', { user }) %>
+
+<style>
+  :root{ --muted:#6b7280; --line:#e5e7eb; --brand:#7b0086; --panel:#fff; }
+  body{ background:#f5f6f8; font-family:Inter,system-ui,Segoe UI,Arial; }
+  .wrap{ max-width:1200px; margin:18px auto 40px; padding:0 16px; display:grid; grid-template-columns: 320px 1fr; gap:16px; }
+  @media (max-width: 980px){ .wrap{ grid-template-columns: 1fr; } }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 24px rgba(0,0,0,.06); }
+  .card h3{ margin:0; font-size:18px; }
+  .card .head{ padding:12px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; }
+  .card .body{ padding:14px; }
+  .muted{ color:var(--muted); }
+  .btn{ border:1px solid var(--brand); color:var(--brand); background:#fff; padding:8px 12px; border-radius:10px; font-weight:700; cursor:pointer; }
+  .btn:hover{ background:var(--brand); color:#fff; }
+
+  .thread{ border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:10px; background:#fff; cursor:pointer; }
+  .thread .title{ font-weight:700; }
+  .thread .meta{ color:var(--muted); font-size:12px; }
+  .reply{ border-top:1px dashed var(--line); padding:10px 0; }
+  .chip{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; background:#f6f3f7; color:#4b5563; }
+
+  .composer textarea{ width:100%; border:1px solid var(--line); border-radius:10px; padding:10px; min-height:90px; resize:vertical; }
+  .row{ display:flex; gap:8px; align-items:center; justify-content:space-between; margin-top:8px; }
+  .right{ display:flex; gap:8px; align-items:center; }
+  .up{ border:1px solid var(--line); border-radius:10px; padding:4px 10px; font-size:12px; cursor:pointer; }
+</style>
+
+<div class="wrap">
+  <!-- Left: FAQ & Trending -->
+  <aside class="card">
+    <div class="head"><h3>FAQs</h3></div>
+    <div class="body" id="faqBox"><div class="muted">Loading…</div></div>
+    <div class="head"><h3>Trending</h3></div>
+    <div class="body" id="trendBox"><div class="muted">Loading…</div></div>
+  </aside>
+
+  <!-- Right: Threads & composer -->
+  <main class="card">
+    <div class="head">
+      <h3>Public Forum — Ask & Answer</h3>
+      <div>
+        <select id="sortSel" class="btn" style="padding:6px 10px;">
+          <option value="trending">Trending</option>
+          <option value="top">Top</option>
+          <option value="new">Newest</option>
+        </select>
+      </div>
+    </div>
+    <div class="body">
+      <!-- New thread -->
+      <section class="card" style="margin-bottom:12px;">
+        <div class="head"><h3>Start a thread</h3></div>
+        <div class="body composer">
+          <input id="ntTitle" placeholder="Short, descriptive title" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;">
+          <textarea id="ntBody" placeholder="Describe your question… (optional)"></textarea>
+          <div class="row">
+            <label class="muted"><input type="checkbox" id="ntAnon" checked> Post as Anonymous</label>
+            <div class="right">
+              <button class="btn" id="ntBtn">Publish</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Thread list -->
+      <section id="threadList"></section>
+
+      <!-- Thread detail -->
+      <section id="threadDetail" style="display:none;">
+        <div class="card">
+          <div class="head"><h3 id="tdTitle">Thread</h3></div>
+          <div class="body">
+            <div class="muted" id="tdMeta"></div>
+            <div id="postList" style="margin-top:12px;"></div>
+
+            <div class="composer" style="margin-top:12px;">
+              <textarea id="rpBody" placeholder="Write a reply…"></textarea>
+              <div class="row">
+                <label class="muted"><input type="checkbox" id="rpAnon" checked> Reply as Anonymous</label>
+                <div class="right">
+                  <button class="btn" id="rpBtn">Reply</button>
+                  <button class="btn" id="tdClose">Back</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+  const threadList = document.getElementById('threadList');
+  const threadDetail = document.getElementById('threadDetail');
+  const tdTitle = document.getElementById('tdTitle');
+  const tdMeta  = document.getElementById('tdMeta');
+  const postList= document.getElementById('postList');
+  const sortSel = document.getElementById('sortSel');
+  const faqBox  = document.getElementById('faqBox');
+  const trendBox= document.getElementById('trendBox');
+
+  let currentThreadId = null;
+
+  const fmtTime = s => new Date(s).toLocaleString();
+
+  async function loadFaqs(){
+    const r = await fetch('/api/anon/faqs');
+    const data = await r.json();
+    faqBox.innerHTML = data.length ? data.map(f => `
+      <div style="margin-bottom:10px">
+        <div><strong>${f.Question}</strong></div>
+        <div class="muted">${f.Answer}</div>
+      </div>
+    `).join('') : '<div class="muted">No FAQs yet.</div>';
+  }
+
+  async function loadThreads(){
+    const r = await fetch('/api/anon/threads?sort=' + encodeURIComponent(sortSel.value));
+    const data = await r.json();
+    threadList.innerHTML = data.map(t => `
+      <article class="thread" data-id="${t.Thread_ID}">
+        <div class="title">${t.Title}</div>
+        <div class="meta">
+          <span class="chip">${t.DisplayName || 'Anonymous'}</span>
+          · ${t.ReplyCount} replies · ${t.TotalUpvotes} upvotes · ${fmtTime(t.Created_At)}
+          ${t.IsLocked ? ' · <span class="chip">Locked</span>' : ''}
+        </div>
+      </article>
+    `).join('');
+    document.querySelectorAll('.thread').forEach(el => {
+      el.addEventListener('click', () => openThread(Number(el.dataset.id)));
+    });
+    // trending = top 5 of same dataset
+    trendBox.innerHTML = data.slice(0,5).map(t => `<div style="margin-bottom:8px">${t.Title}</div>`).join('');
+  }
+
+  async function openThread(id){
+    const r = await fetch('/api/anon/threads/' + id);
+    const { thread, posts } = await r.json();
+    currentThreadId = id;
+
+    tdTitle.textContent = thread.Title;
+    tdMeta.textContent  = `${thread.DisplayName || 'Anonymous'} · ${fmtTime(thread.Created_At)} ${thread.IsLocked ? ' · Locked' : ''}`;
+    postList.innerHTML  = posts.map(p => `
+      <div class="reply">
+        <div class="meta"><span class="chip">${p.DisplayName || 'Anonymous'}</span> · ${fmtTime(p.Created_At)}</div>
+        <div>${p.Body}</div>
+        <button class="up" data-pid="${p.Post_ID}">▲ ${p.Upvotes}</button>
+      </div>
+    `).join('') || '<div class="muted">No replies yet.</div>';
+
+    threadList.style.display = 'none';
+    threadDetail.style.display = '';
+    document.querySelectorAll('.up').forEach(b=>{
+      b.addEventListener('click', async ()=>{
+        await fetch('/api/anon/posts/'+b.dataset.pid+'/upvote', { method:'POST' });
+        openThread(currentThreadId); // refresh
+      });
+    });
+  }
+
+  function backToList(){
+    currentThreadId = null;
+    threadDetail.style.display = 'none';
+    threadList.style.display = '';
+  }
+
+  // New thread
+  document.getElementById('ntBtn').addEventListener('click', async ()=>{
+    const title = document.getElementById('ntTitle').value.trim();
+    const body  = document.getElementById('ntBody').value.trim();
+    const anonymous = document.getElementById('ntAnon').checked;
+    if(title.length < 4) { alert('Title too short'); return; }
+    const r = await fetch('/api/anon/threads', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ title, body, anonymous })
+    });
+    if(!r.ok) { alert('Failed to publish'); return; }
+    document.getElementById('ntTitle').value = '';
+    document.getElementById('ntBody').value  = '';
+    await loadThreads();
+  });
+
+  // Reply
+  document.getElementById('rpBtn').addEventListener('click', async ()=>{
+    if(!currentThreadId) return;
+    const body = document.getElementById('rpBody').value.trim();
+    const anonymous = document.getElementById('rpAnon').checked;
+    if(body.length < 2) { alert('Too short'); return; }
+    const r = await fetch(`/api/anon/threads/${currentThreadId}/posts`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ body, anonymous })
+    });
+    if(!r.ok){ alert('Failed'); return; }
+    document.getElementById('rpBody').value = '';
+    openThread(currentThreadId);
+  });
+
+  document.getElementById('tdClose').addEventListener('click', backToList);
+  sortSel.addEventListener('change', loadThreads);
+
+  // Init
+  loadFaqs();
+  loadThreads();
+</script>
