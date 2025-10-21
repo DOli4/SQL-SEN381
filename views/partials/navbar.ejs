@@ -1,0 +1,50 @@
+<!-- views/partials/navbar.ejs -->
+<style>
+  .cl-nav { position: sticky; top:0; z-index:50; height:64px; background:#fff;
+            border-bottom:1px solid rgba(0,0,0,.06); box-shadow:0 6px 18px rgba(0,0,0,.05); }
+  .cl-nav__inner { max-width:1200px; margin:0 auto; height:64px; display:flex; align-items:center;
+                   justify-content:space-between; padding:0 20px; gap:16px; }
+  .cl-brand { display:flex; align-items:center; gap:10px; }
+  .cl-brand img { width:36px; height:36px; border-radius:50%; }
+  .cl-brand span { font-weight:800; font-size:18px; color:#0f172a; }
+
+  .cl-right { display:flex; align-items:center; gap:10px; }
+  .user-pill { display:flex; align-items:center; gap:8px; padding:6px 10px; background:#f3f4f6;
+               border-radius:999px; color:#111827; }
+  .user-pill .role { color:#6b7280; }
+  .btn-ghost { background:#fff; border:1px solid #e5e7eb; padding:8px 12px; border-radius:10px;
+               text-decoration:none; color:#111827; }
+  .btn-ghost:hover { background:#f9fafb; }
+</style>
+
+<nav class="cl-nav">
+  <div class="cl-nav__inner">
+    <a class="cl-brand" href="/">
+      <img src="/images/BCLogo.png" alt="CampusLearn" />
+      <span>CampusLearn</span>
+    </a>
+
+    <div class="cl-right">
+  <% if (user) { %>
+    <a href="/profile" class="cl-avatar" title="Open profile" aria-label="Open profile">
+      <img src="<%= user.avatarUrl || '/images/avatar-default.png' %>" alt="">
+    </a>
+    <div class="user-pill">
+      <span><%= (user.firstName || user.name || user.email || 'User') %></span>
+      <span class="role">· <%= user.role %></span>
+    </div>
+    <a class="btn-ghost" href="/logout">Logout</a>
+  <% } else { %>
+    <a class="btn-ghost" href="/login">Login</a>
+    <a class="btn-ghost" href="/register">Register</a>
+  <% } %>
+</div>
+
+<style>
+  .cl-avatar{ display:inline-flex; width:38px; height:38px; border-radius:50%; overflow:hidden; }
+  .cl-avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .cl-avatar:hover{ outline:2px solid #e5e7eb; }
+</style>
+
+  </div>
+</nav>

@@ -45,6 +45,9 @@ import geminiRoute from "./routes/geminiRoute.js"; // Gemini API
 import { reloadFromDisk } from "./utils/vstore.js";
 const docsCount = reloadFromDisk();
 console.log(`[vstore] Loaded ${docsCount} chunks into memory.`);
+import profileRoutes from './routes/profile.routes.js';
+import anonRoutes from './routes/anon.routes.js';
+
 
 
 
@@ -78,6 +81,8 @@ app.get('/db-test', async (req, res) => {
 app.use('/', crudRoutes);
 app.use('/', editorRoutes);
 app.use('/', diagRoutes);
+app.use('/', profileRoutes);
+
 
 function requireLogin(req, res, next) {
   if (!req.user) return res.redirect('/login');
@@ -93,6 +98,18 @@ function requireRole(role) {
 app.get('/', (req, res) => res.redirect('/dashboard'));
 app.get('/login', (req, res) => res.render('auth-login'));
 app.get('/register', (req, res) => res.render('auth-register'));
+
+// Splash after login/register
+app.get('/splash/:kind(login|register)', requireLogin, (req, res) => {
+  const kind = req.params.kind; // 'login' or 'register'
+  res.render('splash', {
+    kind,
+    user: req.user,            // already set by JWT middleware
+    goTo: '/dashboard',
+    delayMs: 5000
+  });
+});
+
 app.get('/dashboard', requireLogin, (req, res) => res.render('dashboard'));
 // Chatbot page (renders chatbot.ejs)
 app.get('/chatbot', (req, res) => res.render('chatbot', { pageClass: 'theme-dark' }));
@@ -104,6 +121,54 @@ app.get('/forum/:id', requireAuth, (req, res) => res.render('topic-detail', { to
 app.get('/forum/:id/edit', requireAuth, (req, res) => res.render('topic-edit', { topicId: Number(req.params.id) }));
 
 // ✅ API (mounted once each)
+// LIST: /courses
+app.get('/courses', requireLogin, (req, res) => {
+  // demo data – replace with DB later
+  const courses = [
+    { id: 'sen381', name: 'Intro to Databases', tutor: 'Tutor Name', banner: '/images/frontPage.jpg' },
+    { id: 'wd101',  name: 'Web Dev Fundamentals', tutor: 'Tutor Name', banner: '/images/frontPage.jpg' },
+    { id: 'alg101', name: 'Algorithms 101', tutor: 'Tutor Name', banner: '/images/frontPage.jpg' },
+  ];
+  res.render('courses', { user: req.user, courses });
+});
+
+// DETAIL: /courses/:id
+app.get('/courses/:id', requireLogin, (req, res) => {
+  const course = {
+    id: req.params.id,
+    title: 'SEN381 · Intro to Software Engineering', // swap with real title from DB
+  };
+
+  // Placeholder table of contents (mock). Replace with DB data later.
+  const toc = [
+    {
+      groupId: 'w1',
+      groupTitle: 'Week 1 - Intro to Software Engineering',
+      items: [
+        { id: 'w1-1', title: '01. Introduction to Software Engineering' },
+        { id: 'w1-2', title: 'In-class Quiz · What is Software?' },
+        { id: 'w1-3', title: '02. Programming in Software Engineering' },
+        { id: 'w1-4', title: 'Homework · Predict the output' },
+        { id: 'w1-5', title: '03. Threading' },
+        { id: 'w1-6', title: '04. Socket Programming' },
+        { id: 'w1-7', title: '05. Version Control Systems' },
+      ],
+    },
+    { groupId: 'w2', groupTitle: 'Week 2 - Software Architecture', items: [
+      { id: 'w2-1', title: '01. Layers & Modules' },
+      { id: 'w2-2', title: '02. MVC & MVVM' },
+    ]},
+    { groupId: 'w3', groupTitle: 'Week 3 - UI & UX Design', items: [
+      { id: 'w3-1', title: '01. Principles of UX' },
+    ]},
+  ];
+
+  res.render('course-view', { user: req.user, course, toc });
+});
+
+
+
+// API (each mounted ONCE)
 app.use('/api/auth', authRoutes);
 app.use('/api/topics', topicsRoutes);
 app.use('/api/students', studentsRoutes);
@@ -115,6 +180,9 @@ app.use('/api', contentRoutes);
 app.use('/api', subsRouter);
 // Gemini chatbot API
 app.use('/api/gemini', geminiRoute);
+app.use('/api', contentRoutes); // <- gives /api/topics/:id/content and /api/content/:cid/*
+app.use('/', anonRoutes);
+
 
 // multer size error → clear message for test
 app.use((err, req, res, next) => {
