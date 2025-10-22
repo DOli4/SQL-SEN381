@@ -1,33 +1,35 @@
 import 'dotenv/config';
 import sql from 'mssql/msnodesqlv8.js';
 
-const server   = process.env.SQL_SERVER || 'ULI';
-const instance = process.env.SQL_INSTANCE ? '\\' + process.env.SQL_INSTANCE : '';
-const db       = process.env.SQL_DB || 'CampusLearn';
+// --- Direct LocalDB pipe name ---
+const server = 'np:\\\\.\\pipe\\LOCALDB#3BCC5D31\\tsql\\query';
+const db = process.env.SQL_DB || 'CampusLearn';
 
-/*
-  Driver name: pick one you actually have installed.
-  Most machines have "ODBC Driver 18 for SQL Server".
-  If 18 isn't installed, try 17. (You can switch the string and retry.)
-*/
-const DRIVER = '{ODBC Driver 18 for SQL Server}';
+// ODBC driver (try 18, or switch to 17 if 18 not installed)
+const DRIVER = '{ODBC Driver 17 for SQL Server}';
 
 const connStr =
-  `Server=${server}${instance};` +
+  `Server=${server};` +
   `Database=${db};` +
   `Trusted_Connection=Yes;` +
   `TrustServerCertificate=Yes;` +
   `Driver=${DRIVER};`;
 
-console.log('[DB cfg]', { server: server+instance, db, auth: 'Windows', driver: DRIVER });
+console.log('[DB cfg]', { server, db, driver: DRIVER });
 
 let pool;
+
 export async function getPool() {
   if (!pool) {
-    // With msnodesqlv8, use the connectionString property:
-    pool = await sql.connect({ connectionString: connStr });
-    console.log('[DB] Connected (Windows auth)');
+    try {
+      pool = await sql.connect({ connectionString: connStr });
+      console.log('✅ Connected to LocalDB (CampusLearn)');
+    } catch (err) {
+      console.error('❌ Database connection failed:', err);
+      throw err;
+    }
   }
   return pool;
 }
+
 export { sql };
