@@ -1,4 +1,3 @@
-<!-- views/dashboard.ejs -->
 <%- include('partials/navbar', { user }) %>
 
 <style>
@@ -6,9 +5,25 @@
 
   .wrap { max-width: 1200px; margin: 24px auto; padding: 0 20px; }
 
-  .page-title {
-    font-size: 22px; font-weight: 800; text-align: center; margin: 8px 0 22px;
+  .page-top {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:18px;
   }
+  .page-title {
+    font-size: 22px; font-weight: 800; text-align: center;
+    flex:1; text-align:center;
+  }
+
+  /* Back button */
+  .btn-back {
+    display:inline-flex; align-items:center; gap:6px;
+    border:1.5px solid #7b0086; color:#7b0086;
+    background:#fff; padding:6px 12px;
+    border-radius:8px; font-weight:600;
+    text-decoration:none; box-shadow:0 3px 6px rgba(0,0,0,0.05);
+    transition:all .2s ease;
+  }
+  .btn-back:hover { background:#7b0086; color:#fff; }
 
   /* grid */
   .grid {
@@ -36,26 +51,35 @@
     flex-direction: column;
     gap: 10px;
   }
+  .add-card {
+  border:2px dashed #d1d5db !important;
+  background:#fafafa;
+  transition: all .25s ease;
+}
+.add-card:hover {
+  background:#f9f1fb;
+  border-color:#7b0086 !important;
+  transform:translateY(-3px);
+  box-shadow:0 10px 26px rgba(123,0,134,.1);
+}
+
 
   .course-name { font-weight:700; font-size:15px; }
 
-  /* row: button on left, tutor on right */
   .row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
 
-  /* Enter button */
-  /* make the Enter pill compact no matter what globals exist */
   .card .btn-enter{
-    display: inline-flex !important;   /* beat any a{display:block} */
-    flex: 0 0 auto;                    /* don't grow/shrink in flex row */
-    width: auto !important;            /* never 100% */
-    max-width: max-content;            /* hug text */
+    display: inline-flex !important;
+    flex: 0 0 auto;
+    width: auto !important;
+    max-width: max-content;
     line-height: 1.1;
-    padding: 4px 10px;                 /* smaller pill */
+    padding: 4px 10px;
     border-radius: 10px;
     border: 1px solid #7b0086;
     background: #fff;
@@ -63,22 +87,13 @@
     font-size: 12px;
     font-weight: 700;
     text-decoration: none;
-    align-self: flex-start;            /* stick to the left of the row */
-    margin-left: 6px;                  /* away from the card edge */
+    align-self: flex-start;
+    margin-left: 6px;
   }
   .card .btn-enter:hover{
     background:#7b0086; color:#fff;
   }
 
-  /* keep the row layout */
-  .card .row{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:8px;
-  }
-
-  /* tutor info aligned right */
   .tutor {
     display:flex;
     align-items:center;
@@ -102,7 +117,6 @@
   }
   .muted { color:#6b7280; font-size:12px; }
 
-  /* empty state */
   .empty {
     background:#fff; border:1px dashed #e5e7eb; border-radius:12px; padding:28px;
     text-align:center; color:#6b7280;
@@ -110,7 +124,11 @@
 </style>
 
 <div class="wrap">
-  <div class="page-title">My Courses</div>
+  <div class="page-top">
+    <a href="/dashboard" class="btn-back">← Back to Dashboard</a>
+    <div class="page-title">My Courses</div>
+    <div style="width:80px;"></div> <!-- keeps title centered -->
+  </div>
 
   <% if (!courses || courses.length === 0) { %>
     <div class="empty">No courses yet.</div>
@@ -118,13 +136,11 @@
     <div class="grid">
       <% courses.forEach(c => { %>
         <article class="card">
-          <img class="card-banner" src="<%= c.banner || '/images/frontPage.jpg' %>" alt="">
+          <img class="card-banner" src="<%= c.banner || '/images/frontPage.jpg' %>" alt="Course image">
           <div class="card-body">
             <div class="course-name"><%= c.name %></div>
-
             <div class="row">
               <a class="btn-enter" href="/courses/<%= c.id %>">Enter</a>
-              
               <div class="tutor">
                 <div class="details">
                   <div class="muted">Tutor</div>
@@ -140,4 +156,12 @@
       <% }) %>
     </div>
   <% } %>
+  <!-- Add New Content card (moved to the end) -->
+  <a href="/content-upload" class="card add-card" style="text-decoration:none; color:inherit;">
+    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%;">
+      <div style="font-size:46px; color:#7b0086;">＋</div>
+      <div style="font-weight:700; font-size:15px; color:#7b0086; margin-top:4px;">Add New Content</div>
+      <div style="color:#6b7280; font-size:13px;">Upload course or topic materials</div>
+    </div>
+  </a>
 </div>

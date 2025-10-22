@@ -1,4 +1,3 @@
-<!-- views/dashboard.ejs -->
 <%- include('partials/navbar', { user }) %>
 
 <style>
@@ -41,8 +40,7 @@
         background:linear-gradient(135deg,#fde2ff,#e0eaff); }
 
   /* Panels below */
-  .grid-2{ display:grid; grid-template-columns: 1fr 380px; gap:24px; margin-top:26px; }
-  @media (max-width: 1020px){ .grid-2{ grid-template-columns: 1fr; } }
+  .grid-2{ display:grid; grid-template-columns: 1fr; gap:24px; margin-top:26px; } /* 1 column now */
   .panel{ background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.05); padding:18px; }
   .panel h3{ margin:0 0 10px; font-size:26px; }
 
@@ -64,12 +62,7 @@
         Quick links below.
       </div>
     </div>
-    <div class="actions">
-      <a class="btn-outline" href="/topics">View Topics</a>
-      <% if (user && user.role === 'Student') { %>
-        <a class="btn-primary" href="/topics/create">New Topic</a>
-      <% } %>
-    </div>
+  
   </div>
 
   <div class="tiles" role="navigation" aria-label="Quick links">
@@ -78,18 +71,11 @@
     <a class="tile" href="/chatbot"><div class="label"><div class="ico">🤖</div>ChatBot</div></a>
   </div>
 
+  <!-- Only the Recent Activity section remains -->
   <div class="grid-2">
     <div class="panel">
       <h3>Recent activity</h3>
       <p style="margin:0;color:#6b7280;">No recent activity yet — this area will later show recent courses, forum posts and chat logs.</p>
-    </div>
-    <div class="panel">
-      <h3 style="font-size:24px;">Shortcuts</h3>
-      <ul style="margin:0; padding-left:18px;">
-        <li><a href="/courses">Open My Courses</a></li>
-        <li><a href="/forum">Open Forum</a></li>
-        <li><a href="/chatbot">Open ChatBot</a></li>
-      </ul>
     </div>
   </div>
 
