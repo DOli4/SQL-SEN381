@@ -27,7 +27,7 @@
     <div class="cl-right">
   <% if (user) { %>
     <a href="/profile" class="cl-avatar" title="Open profile" aria-label="Open profile">
-      <img src="<%= user.avatarUrl || '/images/avatar-default.png' %>" alt="">
+      <img src="<%= user.avatarUrl || '/images/profile.png' %>" alt="">
     </a>
     <div class="user-pill">
       <span><%= (user.firstName || user.name || user.email || 'User') %></span>
