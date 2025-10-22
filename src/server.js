@@ -73,9 +73,17 @@ app.get('/db-test', async (req, res) => {
     const r = await pool.request().query('SELECT DB_NAME() AS Db, SUSER_SNAME() AS Login, GETDATE() AS Now');
     res.json(r.recordset[0]);
   } catch (e) {
-    res.status(500).json({ error: e.message || String(e) });
+    console.error('DB-TEST error:', e);
+    const msg =
+      e?.message ||
+      e?.originalError?.message ||
+      e?.sqlMessage ||
+      e?.code ||
+      JSON.stringify(e);
+    res.status(500).json({ error: msg });
   }
 });
+
 
 // Pages
 app.use('/', crudRoutes);
