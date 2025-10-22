@@ -17,28 +17,190 @@
       <textarea name="description" rows="5" class="form-control" placeholder="Describe your issue..."></textarea>
     </div>
 
+    <div class="mb-3">
+      <label for="fileInput" class="form-label">Attachments</label>
+      <div class="file-attachments form-control" onclick="event.preventDefault(); document.getElementById('fileInput').click()"
+           style="border: 2px dashed #d1d5db; 
+                  border-radius: 8px; 
+                  padding: 24px; 
+                  min-height: 160px; 
+                  display: flex; 
+                  flex-direction: column; 
+                  justify-content: center; 
+                  align-items: center; 
+                  cursor: pointer;
+                  background-color: #f9fafb;
+                  transition: all 0.2s ease;">
+        <input type="file" id="fileInput" name="files" multiple accept="*/*" style="display:none" onchange="handleFiles(event)" />
+        <div style="width: 48px;
+                    height: 48px;
+                    border-radius: 50%;
+                    background-color: #e5e7eb;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-bottom: 16px;
+                    font-size: 24px;
+                    color: #6b7280;
+                    transition: all 0.2s ease;">+</div>
+        <div style="font-weight: 600; 
+                    font-size: 16px;
+                    margin-bottom: 8px;
+                    color: #374151;">Click to upload files</div>
+        <div style="font-size: 14px; 
+                    color: #6b7280;
+                    text-align: center;">PDFs, images, documents<br>(max 10MB each)</div>
+      </div>
+      <div id="attachedFiles" class="mt-4" 
+           style="background: white; 
+                  border-radius: 8px;
+                  padding: 16px;
+                  margin-top: 16px;
+                  display: none;">
+        <div class="files-list"></div>
+      </div>
+    </div>
+
+    <style>
+      .file-attachments:hover {
+        border-color: #2563eb;
+        background-color: #f0f7ff;
+      }
+      .file-attachments:hover > div:first-child {
+        background-color: #2563eb;
+        color: white;
+        transform: scale(1.1);
+      }
+      .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background: #f9fafb;
+        border-radius: 6px;
+        margin-bottom: 8px;
+      }
+      .file-name {
+        color: #374151;
+      }
+      .remove-file {
+        color: #dc2626;
+        cursor: pointer;
+        padding: 4px 8px;
+        font-size: 18px;
+        font-weight: bold;
+      }
+      .remove-file:hover {
+        background: #fee2e2;
+        border-radius: 4px;
+      }
+    </style>
+
     <button class="btn btn-primary w-100" onclick="save()">Create Topic</button>
     <p id="msg" class="text-danger mt-2"></p>
   </form>
 </div>
 
 <script>
-async function save(){
-  const body = {
-    title: f.title.value.trim(),
-    moduleId: Number(f.moduleId.value),
-    description: f.description.value.trim() || null
-  };
+function handleFiles(event) {
+  console.log('handleFiles called', event);
+  const files = Array.from(event.target.files || []);
+  console.log('Files selected:', files.map(f => ({ name: f.name, size: f.size })));
+  
+  const attachedFiles = document.getElementById('attachedFiles');
+  const filesList = attachedFiles.querySelector('.files-list');
+  
+  if (!attachedFiles || !filesList) {
+    console.error('Required elements not found:', { attachedFiles, filesList });
+    return;
+  }
+  
+  if (files.length > 0) {
+    attachedFiles.style.display = 'block';
+    const fileElements = files.map((file, index) => `
+      <div class="file-item">
+        <span class="file-name">${file.name}</span>
+        <span class="remove-file" onclick="removeFile(${index})">×</span>
+      </div>
+    `).join('');
+    console.log('Setting innerHTML:', fileElements);
+    filesList.innerHTML = fileElements;
+  } else {
+    console.log('No files selected, hiding attachedFiles');
+    attachedFiles.style.display = 'none';
+    filesList.innerHTML = '';
+  }
+}
+
+function removeFile(index) {
+  const input = document.getElementById('fileInput');
+  const dt = new DataTransfer();
+  const files = Array.from(input.files);
+  
+  files.splice(index, 1);
+  files.forEach(file => dt.items.add(file));
+  
+  input.files = dt.files;
+  handleFiles({ target: input });
+}
+
+async function save() {
+  const msg = document.getElementById('msg');
+  msg.textContent = ''; // Clear any previous error message
+  
   try {
-    const res = await fetch('/api/topics', {
+    const formData = new FormData();
+    
+    // Validate and add required fields
+    const title = f.title.value.trim();
+    const moduleId = f.moduleId.value.trim();
+    
+    if (!title) {
+      msg.textContent = 'Title is required';
+      return;
+    }
+    if (!moduleId) {
+      msg.textContent = 'Module ID is required';
+      return;
+    }
+    
+    formData.append('title', title);
+    formData.append('moduleId', moduleId);
+    formData.append('description', f.description.value.trim() || '');
+
+    // Handle file uploads
+    const fileInput = document.getElementById('fileInput');
+    const files = Array.from(fileInput.files || []);
+    
+    console.log('Files to upload:', files.map(f => ({ name: f.name, size: f.size })));
+    
+    if (files.length > 0) {
+      files.forEach(file => {
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+          throw new Error(`File ${file.name} exceeds 10MB limit`);
+        }
+        formData.append('files', file);
+      });
+    }
+
+    const endpoint = files.length > 0 ? '/api/topics/withfiles' : '/api/topics';
+    console.log('Using endpoint:', endpoint);
+    
+    const res = await fetch(endpoint, {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
       credentials: 'include',
-      body: JSON.stringify(body)
+      body: formData
     });
+
     const data = await res.json();
-    if (!res.ok) { msg.textContent = data.error || 'Failed to create topic'; return; }
-    window.location = '/topics';
-  } catch (e) { msg.textContent = e.message; }
+    if (!res.ok) { 
+      msg.textContent = data.error || 'Failed to create topic'; 
+      return; 
+    }
+    window.location.href = `/forum/${data.Topic_ID}`;
+  } catch (e) { 
+    console.error('Save error:', e);
+    msg.textContent = e.message || 'Failed to save topic'; 
+  }
 }
 </script>

@@ -17,19 +17,59 @@ const connStr =
 
 console.log('[DB cfg]', { server, db, driver: DRIVER });
 
-let pool;
+let pool = null;
+let connectionAttempts = 0;
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 5000; // 5 seconds
 
 export async function getPool() {
-  if (!pool) {
+  // If we have a pool, test it first
+  if (pool) {
     try {
-      pool = await sql.connect({ connectionString: connStr });
-      console.log('✅ Connected to LocalDB (CampusLearn)');
+      await pool.request().query('SELECT 1');
+      return pool;
     } catch (err) {
-      console.error('❌ Database connection failed:', err);
-      throw err;
+      console.warn('Existing pool failed:', err.message);
+      pool = null;
     }
   }
-  return pool;
+
+  // No pool or pool is invalid, try to connect
+  while (connectionAttempts < MAX_RETRIES) {
+    try {
+      pool = await sql.connect({
+        connectionString: connStr,
+        options: {
+          enableArithAbort: true,
+          trustServerCertificate: true,
+          connectTimeout: 30000,
+          requestTimeout: 30000
+        }
+      });
+      connectionAttempts = 0;
+      console.log('✅ Connected to LocalDB (CampusLearn)');
+      return pool;
+    } catch (err) {
+      console.error(`❌ Database connection attempt ${connectionAttempts + 1} failed:`, err);
+      pool = null;
+      connectionAttempts++;
+      
+      if (connectionAttempts >= MAX_RETRIES) {
+        throw new Error(`Database connection failed after ${MAX_RETRIES} attempts: ${err.message}`);
+      }
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+    }
+  }
 }
+
+// Handle process termination
+process.on('exit', () => {
+  if (pool) {
+    console.log('Closing database pool...');
+    pool.close();
+  }
+});
 
 export { sql };
