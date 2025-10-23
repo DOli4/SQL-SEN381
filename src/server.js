@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
 
+
 const app = express();
 
 // Load .env early
@@ -50,6 +51,11 @@ import anonRoutes from './routes/anon.routes.js';
 
 
 
+
+app.use((req, _res, next) => {
+  console.log(`[REQ] ${req.method} ${req.url}  ct=${req.headers['content-type'] || ''}`);
+  next();
+});
 
 // Attach req.user/res.locals.user from JWT cookie (kept from your file)
 app.use((req, res, next) => {
@@ -125,6 +131,8 @@ app.get('/forum', (req, res) => res.render('forum'));
 app.get('/forum/new', requireAuth, (req, res) => res.render('topic-new'));
 app.get('/forum/:id', requireAuth, (req, res) => res.render('topic-detail', { topicId: Number(req.params.id) }));
 app.get('/forum/:id/edit', requireAuth, (req, res) => res.render('topic-edit', { topicId: Number(req.params.id) }));
+
+
 
 // ✅ API (mounted once each)
 // LIST: /courses
@@ -366,19 +374,25 @@ app.use('/api/tutors', tutorsRoutes);
 app.use('/api/resources', resourcesRoutes);
 app.use('/api/messages', messagesRoutes);
 app.use('/api/replies', repliesRoutes);
-app.use('/api', contentRoutes);
+app.use('/content', contentRoutes);
 app.use('/api', subsRouter);
 // Gemini chatbot API
 app.use('/api/gemini', geminiRoute);
-app.use('/api', contentRoutes); // <- gives /api/topics/:id/content and /api/content/:cid/*
 app.use('/', anonRoutes);
+// Render the upload form with modules for the dropdown
+// DB-free content upload page
+app.get('/content-upload', requireLogin, (req, res) => {
+  res.render('content-upload', { user: req.user, ok: req.query.ok, modules: [] });
+});
+
 
 
 // multer size error → clear message for test
 app.use((err, req, res, next) => {
   if (err && err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ error: 'File exceeds maximum allowed size (5 MB)' });
-  }
+  return res.status(413).json({ error: 'File exceeds maximum allowed size (10 MB)' });
+}
+
   next(err);
 });
 
