@@ -1,4 +1,0 @@
-.code-area, .vars-area, .output-area { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; }
-.code-area { min-height: 520px; }
-.vars-area { min-height: 160px; }
-.output-area { background: #0b0b0b; color: #d8d8d8; min-height: 160px; overflow:auto; }

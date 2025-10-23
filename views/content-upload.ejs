@@ -1,0 +1,150 @@
+<%- include('partials/navbar', { user }) %>
+<style>
+  :root{ --bd:#e5e7eb; --muted:#6b7280; --brand:#7b0086; }
+  body{ background:#f5f6f8; font-family:Inter, system-ui, Arial; }
+  .wrap{ max-width:980px; margin:24px auto 80px; padding:0 18px; }
+  .card{ background:#fff; border:1px solid var(--bd); border-radius:14px; box-shadow:0 10px 24px rgba(0,0,0,.06); }
+  .head{ padding:18px 18px 10px; border-bottom:1px solid var(--bd); }
+  .head h1{ margin:0; font-size:24px; font-weight:800; }
+  .body{ padding:18px; }
+  .field{ margin-bottom:16px; }
+  .label{ font-weight:700; margin-bottom:6px; }
+  .help{ color:var(--muted); font-size:12px; margin-top:6px; }
+  .input, .select, .textarea{
+    width:100%; border:1px solid var(--bd); border-radius:10px; padding:10px 12px; background:#fff;
+  }
+  .textarea{ min-height:140px; resize:vertical; }
+  .uploader{
+    border:2px dashed var(--bd); border-radius:12px; min-height:140px; background:#fafafa;
+    display:flex; align-items:center; justify-content:center; text-align:center; cursor:pointer;
+    transition: .15s ease; padding:18px;
+  }
+  .uploader:hover{ background:#f8f5fa; border-color:#c7a0cf; }
+  .uploader input[type=file]{ display:none; }
+  .btns{ display:flex; gap:10px; margin-top:10px; }
+  .btn{
+    border-radius:10px; padding:10px 16px; font-weight:700; cursor:pointer; text-decoration:none; border:1px solid var(--bd);
+  }
+  .btn-primary{ background:#7b0086; color:#fff; border-color:#7b0086; }
+  .btn-primary:hover{ filter:brightness(1.03); }
+  .btn-ghost{ background:#fff; color:#111; }
+  .pill{ display:inline-flex; align-items:center; gap:6px; border:1px solid #ddd; padding:4px 8px; border-radius:999px; font-size:12px; margin:4px 6px 0 0; }
+  .ok{ background:#f0fdf4; border-color:#22c55e; color:#065f46; padding:10px 12px; border-radius:10px; margin-bottom:14px; }
+</style>
+
+<div class="wrap">
+  <div class="card">
+    <div class="head">
+      <h1>Create New Content</h1>
+    </div>
+    <div class="body">
+      <% if (ok) { %>
+        <div class="ok">✅ Uploaded successfully. You can add more files or go back to <a href="/courses">My Courses</a>.</div>
+      <% } %>
+
+      <!-- Upload Form -->
+      <form id="uploadForm" action="/content/upload" method="post" enctype="multipart/form-data">
+        <!-- Title -->
+        <div class="field">
+          <div class="label">Title</div>
+          <input name="title" class="input" placeholder="e.g., Exam Tips" required />
+        </div>
+
+        <!-- Attachments -->
+        <div class="field">
+          <div class="label">Attachments</div>
+          <input
+            id="file"
+            name="file"
+            type="file"
+            accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md"
+            required
+          />
+          <div id="picked" style="margin-top:8px;"></div>
+          <div id="drop" class="uploader" style="margin-top:12px;">
+            <div>
+              <div style="font-weight:700; margin-bottom:4px;">Drop a file here (preview only)</div>
+              <div class="help">For security, you’ll still need to click the picker above to include the file in the form.</div>
+            </div>
+          </div>
+          <div class="help">PDFs, images, documents (max 10MB)</div>
+        </div>
+
+        <!-- Module -->
+        <div class="field">
+          <div class="label">Module (optional)</div>
+          <input name="moduleId" class="input" placeholder="e.g., SEN381" />
+          <div class="help">Free text. Stored with the file in local manifest.</div>
+        </div>
+
+        <!-- Notes -->
+        <div class="field">
+          <div class="label">Content</div>
+          <textarea name="notes" class="textarea" placeholder="Short description (optional)"></textarea>
+        </div>
+
+        <div class="btns">
+          <button class="btn btn-primary" type="submit">Submit</button>
+          <a class="btn btn-ghost" href="/courses">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // simple preview logic
+  const input = document.getElementById('file');
+  const drop  = document.getElementById('drop');
+  const out   = document.getElementById('picked');
+  const fmt = b => (b/1024/1024).toFixed(2) + ' MB';
+
+  function render(files) {
+    if (!out) return;
+    out.innerHTML = '';
+    [...files].forEach(f => {
+      const pill = document.createElement('span');
+      pill.className = 'pill';
+      pill.textContent = `${f.name} · ${fmt(f.size)}`;
+      out.appendChild(pill);
+    });
+  }
+
+  if (input) input.addEventListener('change', e => render(e.target.files));
+
+  if (drop) {
+    ['dragover','dragenter'].forEach(ev => drop.addEventListener(ev, e => {
+      e.preventDefault(); drop.style.borderColor = '#7b0086';
+    }));
+    ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => {
+      e.preventDefault(); drop.style.borderColor = '';
+    }));
+    drop.addEventListener('drop', e => {
+      e.preventDefault();
+      render(e.dataTransfer.files);
+      alert('⚠️ Please select the same file with the picker above before submitting.');
+    });
+  }
+
+  // guaranteed upload with fetch
+  const form = document.getElementById('uploadForm');
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fileInput = document.getElementById('file');
+    if (!fileInput.files.length) {
+      alert('Please choose a file first.');
+      return;
+    }
+    const fd = new FormData(form);
+    fd.set('file', fileInput.files[0]);  // ensure correct field name
+    const res = await fetch(form.action, { method: 'POST', body: fd });
+    if (res.redirected) {
+      location.href = res.url;
+      return;
+    }
+    if (!res.ok) {
+      const text = await res.text();
+      alert('Upload failed: ' + text);
+    }
+  });
+</script>

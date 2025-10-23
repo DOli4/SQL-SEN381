@@ -1,0 +1,193 @@
+<%- include('partials/navbar', { user }) %>
+
+<style>
+  :root{
+    --bg:#f5f6f8; --panel:#fff; --muted:#6b7280; --line:#e5e7eb; --brand:#7b0086;
+    --radius:14px; --shadow:0 12px 30px rgba(0,0,0,.08);
+    --side:320px;
+  }
+  body{ background:var(--bg); font-family:Inter,system-ui,Segoe UI,Arial; }
+  .cv-wrap{ max-width:1400px; margin:18px auto 42px; padding:0 16px; }
+  .cv-crumb{ color:var(--muted); font-size:14px; margin-bottom:6px; }
+  .cv-h1{ font-weight:800; font-size:28px; margin:0 0 14px; }
+
+  .cv-shell{
+    display:grid; grid-template-columns: var(--side) 1fr;
+    grid-template-areas: "side main"; gap:18px; align-items:start;
+    transition:grid-template-columns .25s ease;
+  }
+
+  /* === NEW: sidebar completely disappears when collapsed (desktop) === */
+  .cv-shell.collapsed{ grid-template-columns: 0 1fr; }
+  .cv-shell.collapsed .cv-side{ display:none; }
+
+  /* Sidebar */
+  .cv-side{ grid-area:side; position:sticky; top:92px; height:calc(100vh - 120px);
+    border:1px solid var(--line); background:var(--panel); border-radius:var(--radius);
+    box-shadow:var(--shadow); overflow:hidden; transition:width .25s ease; }
+
+  .cv-side-head{ display:flex; align-items:center; justify-content:space-between;
+    padding:10px 12px; border-bottom:1px solid var(--line); background:#fafafa; }
+  .cv-side-title{ font-weight:800; }
+  .cv-close,.cv-hamb{ border:1px solid var(--line); background:#fff; border-radius:10px;
+    padding:6px 10px; cursor:pointer; font-weight:600; }
+  .cv-list{ height:100%; overflow:auto; padding:10px; }
+
+  .cv-group{ border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-bottom:10px; }
+  .cv-group-h{ padding:10px 12px; background:#f8fafc; cursor:pointer; font-weight:700;
+    display:flex; justify-content:space-between; }
+  .cv-items{ display:none; } .cv-items.open{ display:block; }
+
+  .cv-item{ padding:12px; border-top:1px solid var(--line); display:flex; gap:12px; align-items:center;
+    text-decoration:none; color:inherit; }
+  .cv-item:hover{ background:#f7f7fb; }
+  .cv-item.active{ background:#f1e7f4; border-left:3px solid var(--brand); }
+
+  /* Content */
+  .cv-card{ grid-area:main; background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius); box-shadow:var(--shadow); padding:26px 28px; min-height:60vh; }
+  .cv-ct-title{ font-size:26px; font-weight:800; margin:0 0 6px; }
+  .cv-ct-meta{ color:var(--muted); font-size:14px; margin-bottom:18px; }
+  .cv-card article h3{ margin:20px 0 10px; font-size:20px; }
+  .cv-card article p{ line-height:1.75; margin:12px 0; }
+  .cv-card ul{ margin:8px 0 12px 22px; }
+
+  /* Hamburger + mobile (keep always visible) */
+  .cv-hamb{ position:sticky; top:92px; z-index:5; width:42px; height:42px;
+    border:1px solid var(--line); border-radius:12px; background:#fff; box-shadow:var(--shadow);
+    display:grid; place-items:center; cursor:pointer; margin-left:0; }
+  .cv-hamb span{ display:block; width:18px; height:2px; background:#111; position:relative; }
+  .cv-hamb span::before,.cv-hamb span::after{ content:""; position:absolute; left:0; width:18px; height:2px; background:#111; }
+  .cv-hamb span::before{ top:-6px; } .cv-hamb span::after{ top:6px; }
+
+  @media (max-width:980px){
+    .cv-shell{ display:block; }
+    .cv-hamb{ position:fixed; left:18px; top:86px; }
+    .cv-side{ position:fixed; left:0; top:72px; bottom:0; width:min(86vw,320px);
+      transform:translateX(-110%); transition:transform .25s ease; z-index:1200; border-radius:0 14px 14px 0; display:block; }
+    .cv-shell.open .cv-side{ transform:translateX(0); }
+    .cv-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.25); opacity:0; visibility:hidden; transition:.2s; z-index:1190; }
+    .cv-shell.open + .cv-overlay{ opacity:1; visibility:visible; }
+
+    /* Ignore collapsed state on mobile; drawer controls visibility */
+    .cv-shell.collapsed .cv-side{ display:block; }
+  }
+</style>
+
+<div class="cv-wrap">
+  <div class="cv-crumb">Dashboard / My courses / <%= course.title %></div>
+  <h1 class="cv-h1"><%= course.title %></h1>
+
+  <div class="cv-shell" id="cvShell">
+    <!-- Hamburger -->
+    <button class="cv-hamb" id="cvHamb" aria-label="Toggle contents"><span></span></button>
+
+    <!-- LEFT: Contents -->
+    <aside class="cv-side" id="cvSide" aria-label="Course contents">
+      <div class="cv-side-head">
+        <div class="cv-side-title">Contents</div>
+        <button class="cv-close" id="cvClose">✕</button>
+      </div>
+      <div class="cv-list">
+        <% toc.forEach(group => { 
+             const isOpen = group.items.some(it => it.id === selected);
+        %>
+          <section class="cv-group" data-group="<%= group.groupId %>">
+            <div class="cv-group-h"><span><%= group.groupTitle %></span><span>▾</span></div>
+            <div class="cv-items <%= isOpen ? 'open' : '' %>">
+              <% group.items.forEach((it, idx) => { %>
+                <a href="/courses/<%= course.id %>?item=<%= it.id %>"
+                   class="cv-item <%= selected === it.id ? 'active' : '' %>"
+                   data-id="<%= it.id %>">
+                  <span style="min-width:28px;"><%= (idx+1).toString().padStart(2,'0') %>.</span>
+                  <span><%- it.title %></span>
+                </a>
+              <% }) %>
+            </div>
+          </section>
+        <% }) %>
+      </div>
+    </aside>
+
+    <!-- RIGHT: Lesson (server-rendered) -->
+  <main class="cv-card">
+  <!-- Back Button -->
+  <div style="display:flex; justify-content:flex-start; margin-bottom:16px;">
+    <a href="/courses" 
+       style="display:inline-flex; align-items:center; gap:6px;
+              background:#fff; border:1.5px solid var(--brand); color:var(--brand);
+              padding:6px 14px; border-radius:8px; font-weight:600;
+              text-decoration:none; box-shadow:0 3px 6px rgba(0,0,0,0.05);
+              transition:all .2s ease;">
+      ← Back to My Courses
+    </a>
+  </div>
+
+  <div class="cv-ct-title"><%= page.h1 %></div>
+  <div class="cv-ct-meta">
+    <%
+      const activeGroup = toc.find(g => g.items.some(it => it.id === selected));
+      const groupTitle  = activeGroup ? activeGroup.groupTitle : 'Week';
+    %>
+    <%= groupTitle %> · <%= page.h1 %>
+  </div>
+  <div id="cvCt">
+    <article><%- page.body %></article>
+  </div>
+</main>
+
+  </div>
+
+  <div class="cv-overlay" id="cvOverlay"></div>
+</div>
+
+<script>
+  const shell    = document.getElementById('cvShell');
+  const hamb     = document.getElementById('cvHamb');
+  const closeBtn = document.getElementById('cvClose');
+  const overlay  = document.getElementById('cvOverlay');
+
+  const isMobile = () => window.matchMedia('(max-width:980px)').matches;
+
+  function setRail(on){
+    // Desktop: toggle collapsed (sidebar hidden). Mobile: ignore collapsed.
+    if (isMobile()) { shell.classList.remove('collapsed'); return; }
+    shell.classList.toggle('collapsed', on);
+    localStorage.setItem('cvRail', on ? '1':'0');
+  }
+
+  function openDrawer(){ if (isMobile()) shell.classList.add('open'); }
+  function closeDrawer(){ shell.classList.remove('open'); }
+
+  // Restore last desktop state
+  setRail(localStorage.getItem('cvRail') === '1');
+
+  // Hamburger
+  hamb.addEventListener('click', () => {
+    if (isMobile()) {
+      shell.classList.contains('open') ? closeDrawer() : openDrawer();
+    } else {
+      setRail(!shell.classList.contains('collapsed'));
+    }
+  });
+
+  // X button
+  closeBtn.addEventListener('click', () => {
+    if (isMobile()) closeDrawer(); else setRail(true);
+  });
+
+  overlay.addEventListener('click', closeDrawer);
+
+  // Resize behavior
+  window.addEventListener('resize', () => {
+    if (!isMobile()) { closeDrawer(); setRail(shell.classList.contains('collapsed')); }
+    else { shell.classList.remove('collapsed'); }
+  });
+
+  // Expand/collapse groups
+  document.querySelectorAll('.cv-group').forEach(g => {
+    const hdr = g.querySelector('.cv-group-h');
+    const box = g.querySelector('.cv-items');
+    hdr.addEventListener('click', () => box.classList.toggle('open'));
+  });
+</script>

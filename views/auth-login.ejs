@@ -1,0 +1,222 @@
+<!-- login.ejs -->
+<style>
+  nav, .navbar, header { display:none !important; }
+
+  body {
+    margin:0;
+    min-height:100vh;
+    background:url("/images/frontPage.jpg") center/cover no-repeat fixed;
+    font-family:"Inter",system-ui,Segoe UI,Roboto,Arial,sans-serif;
+  }
+
+  .login-wrap {
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    padding:24px;
+  }
+
+  /* Floating logo */
+  .page-brand {
+    position:absolute;
+    top:28px; left:60px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .page-brand img { width:52px; height:52px; border-radius:50%; }
+  .page-brand span { font-weight:700; color:#0f172a; }
+
+  /* Card */
+  .glass-card {
+    background:#fff;
+    border-radius:22px;
+    box-shadow:0 16px 40px rgba(0,0,0,.18);
+    width:min(760px,92vw);
+    padding:56px 64px 50px;
+    color:#0f172a;
+  }
+
+  .glass-card h1 {
+    font-size:42px; line-height:1.1; font-weight:800;
+    margin:0 0 12px;
+  }
+  .subtitle { font-size:15px; margin:0 0 26px; }
+  .subtitle a { color:#7b0086; text-decoration:underline; }
+
+
+  /* Inputs */
+.input-group {
+  display: flex;
+  align-items: center;
+  background: #e9e9ec;
+  border-radius: 14px;
+  margin-bottom: 18px;
+  padding-right: 10px; /* space for the eye */
+}
+
+.input-group:focus-within {
+  outline: 2px solid #9ca3af;
+  background: #f3f4f6;
+}
+
+/* Make the input fill most of the space */
+/* Password input as a single rounded control */
+.input-group{
+  display:flex;
+  align-items:center;
+  background:#e9e9ec;
+  border-radius:14px;
+  margin-bottom:18px;
+  padding-right:10px;          /* room for the eye */
+  overflow:hidden;             /* clip children -> keeps corners rounded */
+}
+
+.input-group:focus-within{
+  outline:2px solid #9ca3af;
+  background:#f3f4f6;
+}
+
+/* Remove the inner input's bottom margin that made the bar look “fat” */
+.input-group .form-control{
+  flex:1;
+  border:none;
+  background:transparent;
+  padding:16px 18px;
+  font-size:16px;
+  border-radius:14px;
+  outline:none;
+  margin-bottom:0;             /* <-- key fix */
+}
+
+/* Eye: perfectly centered, no effect on corners */
+.pw-eye{
+  background:none;
+  border:none;
+  cursor:pointer;
+  opacity:.6;
+  font-size:18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+  padding:0 8px;
+}
+.pw-eye:hover{ opacity:1; }
+
+  .form-control {
+    width:100%;
+    background:#e9e9ec;
+    border:none; border-radius:14px;
+    padding:16px 18px; margin-bottom:18px;
+    font-size:16px;
+  }
+  .form-control:focus {
+    outline:2px solid #9ca3af;
+    background:#f3f4f6;
+  }
+
+  .forgot {
+    text-align:right;
+    margin-top:2px;
+    margin-bottom:22px;
+  }
+  .forgot a {
+    color:#7b0086;
+    font-size:14px;
+    text-decoration:underline;
+  }
+
+  /* Button */
+  .btn-outline-rose {
+    width:100%;
+    font-weight:700;
+    font-size:16px;
+    background:transparent;
+    color:#7b0086;
+    border:2px solid #7b0086;
+    border-radius:14px;
+    padding:14px 20px;
+    transition:all .2s ease;
+  }
+  .btn-outline-rose:hover {
+    background:#7b0086;
+    color:#fff;
+  }
+
+  #msg {
+    color:#b91c1c;
+    margin-top:10px;
+    font-size:.95rem;
+  }
+
+  @media (max-width:900px) {
+    .login-wrap { padding:24px; justify-content:center; }
+    .glass-card { width:min(560px,96vw); padding:40px 28px; }
+    .glass-card h1 { font-size:32px; }
+    .page-brand { left:20px; top:20px; }
+  }
+</style>
+
+<div class="login-wrap">
+  <div class="page-brand">
+    <img src="/images/BCLogo.png" alt="CampusLearn">
+    <span>CampusLearn</span>
+  </div>
+
+  <div class="glass-card">
+    <h1>Hi, Welcome To Campus Learn</h1>
+
+    <p class="subtitle">
+      Enter your details to log in.<br>
+      Don’t have an account? <a href="/register">Register</a>
+    </p>
+
+    <form id="loginForm" onsubmit="return false;">
+      <input name="email" type="email" class="form-control" placeholder="you@belgiumcampus.ac.za" required />
+
+      <!-- Password field -->
+    <div class="input-group">
+      <input id="pw" name="password" type="password" class="form-control" placeholder="Password" required />
+      <button type="button" class="pw-eye" id="pwToggle" title="Show/Hide Password">👁️</button>
+    </div>
+
+
+      <div class="forgot"><a href="#">Forgot your password?</a></div>
+
+      <button type="button" class="btn-outline-rose" onclick="doLogin()">Login</button>
+      <p id="msg"></p>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Eye toggle logic
+  const pw = document.getElementById('pw');
+  const pwToggle = document.getElementById('pwToggle');
+  pwToggle.addEventListener('click', () => {
+    pw.type = pw.type === 'password' ? 'text' : 'password';
+  });
+
+  async function doLogin(){
+    const msg = document.getElementById('msg');
+    const body = {
+      email: loginForm.email.value.trim(),
+      password: loginForm.password.value
+    };
+    msg.textContent = '';
+    try{
+      const res = await fetch('/api/auth/login', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if(!res.ok){ msg.textContent = data.error || 'Login failed'; return; }
+      window.location = '/splash/login';
+    }catch(e){
+      msg.textContent = e.message || 'Network error';
+    }
+  }
+</script>

@@ -1,0 +1,152 @@
+<!-- views/dashboard.ejs -->
+<%- include('partials/navbar', { user }) %>
+
+<% pageClass = 'theme-dark' %>
+
+
+<main class="cl-root">
+  <!-- Header -->
+  <header class="cl-header">
+    <div class="cl-brand">
+      <div class="cl-logo">💬</div>
+      <div>
+        <h1 class="cl-title">CampusLearnHelper</h1>
+      </div>
+    </div>
+  </header>
+
+  <!-- Input bar -->
+  <section class="cl-composer">
+    <form id="chatForm" class="cl-composer-form" aria-label="Chat input">
+      <input
+        id="userMessage"
+        class="cl-input"
+        type="text"
+        placeholder="Message CampusLearnHelper"
+        autocomplete="off"
+      />
+      <button class="cl-send" type="submit">Send</button>
+    </form>
+  </section>
+
+  <!-- Quick actions -->
+  <section class="cl-quick">
+    <button class="cl-card" data-msg="Ask a tutor">
+      <span class="cl-card-title">Ask a Tutor</span>
+      <span class="cl-card-desc">I need help understanding a topic in SEN381.</span>
+    </button>
+    <button class="cl-card" data-msg="Find study material">
+      <span class="cl-card-title">Find Study Material</span>
+      <span class="cl-card-desc">Show me the notes for Database Systems.</span>
+    </button>
+    <button class="cl-card" data-msg="How do I upload an assignment?">
+      <span class="cl-card-title">How to Upload Content</span>
+      <span class="cl-card-desc">How do I upload a PDF or assignment on CampusLearn?</span>
+    </button>
+  </section>
+
+  <!-- Chat log -->
+  <section class="cl-chat" aria-live="polite">
+    <ul id="log" class="cl-log"></ul>
+  </section>
+</main>
+
+<script>
+  const log   = document.getElementById("log");
+  const input = document.getElementById("userMessage");
+  const form  = document.getElementById("chatForm");
+
+  function escapeHtml(s) {
+    return (s || "").replace(/[&<>"']/g, c =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // Add message bubble
+  function addMsg(who, html) {
+    const li = document.createElement("li");
+    li.className = who === "you" ? "cl-msg you" : "cl-msg bot";
+    li.innerHTML = `<div class="cl-bubble">${html}</div>`;
+    log.appendChild(li);
+    log.parentElement.scrollTop = log.parentElement.scrollHeight;
+    return li.querySelector(".cl-bubble");
+  }
+
+  // Quick cards → submit
+  document.querySelectorAll(".cl-card").forEach(btn => {
+    btn.addEventListener("click", () => {
+      input.value = btn.dataset.msg;
+      form.dispatchEvent(new Event("submit", { cancelable: true }));
+    });
+  });
+
+  // Suggested replies under the chat
+  const sugg = document.createElement("div");
+  sugg.id = "suggested";
+  sugg.style.marginTop = "10px";
+  log.parentElement.after(sugg);
+
+  function showSuggestions(arr = []) {
+    sugg.innerHTML = "";
+    arr.forEach(label => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn btn-sm btn-outline-light me-2 mb-2";
+      b.textContent = label;
+      b.onclick = () => {
+        input.value = label;
+        form.dispatchEvent(new Event("submit", { cancelable: true }));
+      };
+      sugg.appendChild(b);
+    });
+  }
+
+  // Submit → call Gemini API
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const message = input.value.trim();
+    if (!message) return;
+
+    addMsg("you", escapeHtml(message));
+    input.value = "";
+    showSuggestions([]);
+
+    const bubble = addMsg("bot", "Thinking…");
+
+    try {
+      const res = await fetch("/api/gemini/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Request failed");
+
+      // Render reply
+      const safeReply = escapeHtml(data.reply || "").replace(/\n/g, "<br>");
+      bubble.innerHTML = safeReply;
+
+      // Append sources (if returned)
+      if (data.sources) {
+        const src = document.createElement("div");
+        src.className = "cl-sources";
+        src.textContent = data.sources;
+        bubble.appendChild(src);
+      }
+
+      // Optional buttons for follow-ups
+      showSuggestions(data.suggestedReplies || []);
+
+    } catch (err) {
+      bubble.textContent = "Sorry—something went wrong. Please try again.";
+      showSuggestions([
+        "Ask a tutor",
+        "Find study material",
+        "How do I upload an assignment?"
+      ]);
+      console.error(err);
+    }
+  });
+
+  input.focus();
+</script>

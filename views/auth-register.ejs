@@ -1,0 +1,189 @@
+<!-- register.ejs -->
+<style>
+
+  nav, .navbar, header {
+    display: none !important;
+  }
+  .auth-wrap { min-height: 100vh;}
+  .auth-card { max-width: 1160px; margin: 24px auto; background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.06); }
+  .auth-left{
+  position: relative;
+  min-height: 560px;            /* mobile/tablet baseline */
+  overflow: hidden;
+  }
+  .brand {
+    position:absolute; top:24px; left:24px; z-index:2;
+    display:flex; align-items:center; gap:10px;
+  }
+  .brand img { width:46px; height:46px; border-radius:50%; }
+  .brand span { font-weight:700; color:#0f172a; } /* dark text */
+  .hero{ width:100%; height:100%; }
+  .hero img{
+    width:100%;
+    height:100%;
+    object-fit: cover;            /* no stretching; crop instead */
+    object-position: center;      /* tweak if you want left/center */
+    display:block;
+  }
+
+  .auth-right{ padding:36px 44px; }
+  .page-title{ font-size:38px; margin-bottom:6px; }
+  .subtle { color:#6b7280; font-size:14px; }
+  .subtle a { text-decoration:underline; }
+  .field { background:#e9e9ec; border:none; border-radius:10px; padding:14px 16px; }
+  .field:focus { outline:2px solid #9ca3af; background:#f3f4f6; }
+  .row-gap { row-gap:18px; }
+  .btn-primary-rose { background:#fff; color: #8a007a; border:solid #8a007a 0.2rem; padding:12px 18px; border-radius:12px; }
+  .btn-primary-rose:hover { background: #8a007a; color: #fff;}
+  .pw-eye { position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; opacity:.6; }
+  .error { color:#b91c1c; font-size:.9rem; margin-top:8px; }
+  @media (min-width: 992px) {
+  .auth-card{
+    height: 640px;              /* ← clamps height */
+  }
+  .auth-left,
+  .hero,
+  .hero img{
+    height: 100%;               /* ← fills the clamped height */
+  }
+}
+</style>
+
+<div class="auth-wrap">
+  <div class="auth-card container-fluid">
+    <div class="row g-0">
+
+      <!-- LEFT: logo floating over image -->
+      <div class="col-lg-6 auth-left">
+        <div class="brand">
+          <img src="/images/BCLogo.png" alt="CampusLearn logo" />
+          <span>CampusLearn</span>
+        </div>
+        <div class="hero">
+          <img src="/images/frontPage.jpg" alt="Background" />
+        </div>
+      </div>
+
+      <!-- RIGHT: form -->
+      <div class="col-lg-6 auth-right">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="page-title">Create an Account</div>
+        </div>
+        <div class="subtle mb-4">
+          Already have an account?
+          <a href="/login">Log in</a>
+        </div>
+
+        <form id="regForm" onsubmit="return false;">
+          <div class="row row-gap">
+            <div class="col-md-6">
+              <input name="firstName" class="form-control field" placeholder="First Name" />
+            </div>
+            <div class="col-md-6">
+              <input name="lastName" class="form-control field" placeholder="Last Name" />
+            </div>
+
+            <div class="col-md-6">
+              <input name="email" type="email" class="form-control field" placeholder="you@belgiumcampus.ac.za" required />
+            </div>
+            <div class="col-md-6">
+              <input name="phone" class="form-control field" placeholder="Phone" />
+            </div>
+
+            <div class="col-md-6">
+              <input name="dob" type="date" class="form-control field" placeholder="Date of Birth" />
+            </div>
+            <div class="col-md-6">
+              <input name="address" class="form-control field" placeholder="Address" />
+            </div>
+
+            <div class="col-12 position-relative">
+              <input id="pw" name="password" type="password" class="form-control field" placeholder="Enter Password" required />
+              <span class="pw-eye" id="pwToggle" title="Show/Hide Password">👁️</span>
+            </div>
+
+            <div class="col-12">
+              <input id="pw2" name="confirm" type="password" class="form-control field" placeholder="Confirm Password" required />
+            </div>
+
+            <input type="hidden" name="role" value="Student" />
+
+            <div class="col-12">
+              <button type="button" class="btn btn-primary-rose w-100" id="submitBtn">Create Account</button>
+              <p id="msg" class="error"></p>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const regForm   = document.getElementById('regForm');
+  const pw        = document.getElementById('pw');
+  const pw2       = document.getElementById('pw2');
+  const pwToggle  = document.getElementById('pwToggle');
+  const msg       = document.getElementById('msg');
+  const submitBtn = document.getElementById('submitBtn');
+
+  pwToggle.addEventListener('click', () => {
+    const t = pw.type === 'password' ? 'text' : 'password';
+    pw.type = t; pw2.type = t;
+  });
+
+  const emailEndsWithCampus = (e) => /@belgiumcampus\.ac\.za$/i.test(e || '');
+
+  function getBody() {
+    return {
+      email: regForm.email.value.trim(),
+      firstName: regForm.firstName.value.trim() || null,
+      lastName: regForm.lastName.value.trim() || null,
+      phone: regForm.phone.value.trim() || null,
+      dob: regForm.dob.value || null,
+      address: regForm.address.value.trim() || null,
+      password: regForm.password.value,
+      role: regForm.role.value
+    };
+  }
+
+  async function doRegister() {
+    msg.textContent = '';
+    const body = getBody();
+
+    if (!emailEndsWithCampus(body.email)) {
+      msg.textContent = 'Please use your @belgiumcampus.ac.za email.'; return;
+    }
+    if (body.password.length < 8) {
+      msg.textContent = 'Password must be at least 8 characters.'; return;
+    }
+    if (pw.value !== pw2.value) {
+      msg.textContent = 'Passwords do not match.'; return;
+    }
+
+    submitBtn.disabled = true; submitBtn.textContent = 'Creating...';
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        msg.textContent = data.error || 'Registration failed';
+        submitBtn.disabled = false; submitBtn.textContent = 'Create Account';
+        return;
+      }
+      window.location = '/splash/register';
+    } catch (e) {
+      msg.textContent = e.message || 'Network error';
+      submitBtn.disabled = false; submitBtn.textContent = 'Create Account';
+    }
+  }
+
+  submitBtn.addEventListener('click', doRegister);
+  regForm.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); doRegister(); }
+  });
+</script>

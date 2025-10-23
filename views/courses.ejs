@@ -1,0 +1,172 @@
+<%- include('partials/navbar', { user }) %>
+
+<style>
+  body { background:#f5f6f8; font-family: Inter, system-ui, Arial; }
+
+  .wrap { max-width: 1200px; margin: 24px auto; padding: 0 20px; }
+
+  .page-top {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:18px;
+  }
+  .page-title {
+    font-size: 22px; font-weight: 800; text-align: center;
+    flex:1; text-align:center;
+  }
+
+  /* Back button */
+  .btn-back {
+    display:inline-flex; align-items:center; gap:6px;
+    border:1.5px solid #7b0086; color:#7b0086;
+    background:#fff; padding:6px 12px;
+    border-radius:8px; font-weight:600;
+    text-decoration:none; box-shadow:0 3px 6px rgba(0,0,0,0.05);
+    transition:all .2s ease;
+  }
+  .btn-back:hover { background:#7b0086; color:#fff; }
+
+  /* grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 720px)  { .grid { grid-template-columns: 1fr; } }
+
+  /* card */
+  .card {
+    background:#fff; border:1px solid rgba(0,0,0,.06); border-radius: 16px;
+    overflow:hidden; box-shadow: 0 10px 24px rgba(0,0,0,.06);
+    display:flex; flex-direction:column;
+  }
+  .card-banner {
+    width:100%; aspect-ratio: 16/9; background:#e5e7eb;
+    object-fit: cover;
+  }
+
+  .card-body {
+    padding: 14px 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+.add-card {
+  border:2px dashed #d1d5db !important;
+  background:#fafafa;
+  transition: all .25s ease;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100%;
+}
+.add-card:hover {
+  background:#f9f1fb;
+  border-color:#7b0086 !important;
+  transform:translateY(-3px);
+  box-shadow:0 10px 26px rgba(123,0,134,.1);
+}
+
+
+
+  .course-name { font-weight:700; font-size:15px; }
+
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .card .btn-enter{
+    display: inline-flex !important;
+    flex: 0 0 auto;
+    width: auto !important;
+    max-width: max-content;
+    line-height: 1.1;
+    padding: 4px 10px;
+    border-radius: 10px;
+    border: 1px solid #7b0086;
+    background: #fff;
+    color: #7b0086;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    align-self: flex-start;
+    margin-left: 6px;
+  }
+  .card .btn-enter:hover{
+    background:#7b0086; color:#fff;
+  }
+
+  .tutor {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    justify-content:flex-end;
+    text-align:right;
+  }
+  .tutor .avatar {
+    width:30px; height:30px;
+    border-radius:50%;
+    background:#e5e7eb;
+    display:grid; place-items:center;
+    color:#6b7280;
+    font-weight:700;
+    flex-shrink:0;
+  }
+  .tutor .details {
+    display:flex;
+    flex-direction:column;
+    line-height:1.2;
+  }
+  .muted { color:#6b7280; font-size:12px; }
+
+  .empty {
+    background:#fff; border:1px dashed #e5e7eb; border-radius:12px; padding:28px;
+    text-align:center; color:#6b7280;
+  }
+</style>
+
+<div class="wrap">
+  <div class="page-top">
+    <a href="/dashboard" class="btn-back">← Back to Dashboard</a>
+    <div class="page-title">My Courses</div>
+    <div style="width:80px;"></div> <!-- keeps title centered -->
+  </div>
+
+  <% if (!courses || courses.length === 0) { %>
+    <div class="empty">No courses yet.</div>
+  <% } else { %>
+    <div class="grid">
+      <% courses.forEach(c => { %>
+        <article class="card">
+          <img class="card-banner" src="<%= c.banner || '/images/frontPage.jpg' %>" alt="Course image">
+          <div class="card-body">
+            <div class="course-name"><%= c.name %></div>
+            <div class="row">
+              <a class="btn-enter" href="/courses/<%= c.id %>">Enter</a>
+              <div class="tutor">
+                <div class="details">
+                  <div class="muted">Tutor</div>
+                  <div><%= c.tutor || '—' %></div>
+                </div>
+                <div class="avatar">
+                  <%= (c.tutor && c.tutor[0]) ? c.tutor[0].toUpperCase() : 'T' %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      <% }) %>
+      <!-- Add New Content card (now same size as others) -->
+      <article class="card add-card">
+        <a href="/content-upload" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1;">
+          <div style="font-size:46px; color:#7b0086;">＋</div>
+          <div style="font-weight:700; font-size:15px; color:#7b0086; margin-top:4px;">Add New Content</div>
+          <div style="color:#6b7280; font-size:13px;">Upload course or topic materials</div>
+        </a>
+      </article>
+    </div>
+  <% } %>
+</div>

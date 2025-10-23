@@ -1,0 +1,167 @@
+<%- include('partials/navbar', { user }) %>
+
+<style>
+  :root { --muted:#6b7280; --card:#fff; }
+  body{ background:#f5f6f8; font-family: Inter, system-ui, Arial; }
+
+  .profile-wrap{ max-width:1200px; margin:26px auto; padding:0 20px; display:grid; grid-template-columns: 240px 1fr; gap:20px; }
+  @media (max-width: 980px){ .profile-wrap{ grid-template-columns: 1fr; } }
+
+  /* Sidebar */
+  .side{ background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.05); padding:14px; }
+  .side a{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; color:#111; text-decoration:none; }
+  .side a:hover{ background:#f3f4f6; }
+  .side .danger{ color:#b91c1c; }
+
+  /* Main card */
+  .card{ background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:16px; box-shadow:0 10px 28px rgba(0,0,0,.06); }
+  .card-hd{ display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid rgba(0,0,0,.06); }
+  .card-bd{ padding:18px; }
+
+  .title{ margin:0; font-size:22px; font-weight:800; }
+  .muted{ color:var(--muted); }
+
+  .avatar-big{ width:72px; height:72px; border-radius:50%; overflow:hidden; background:#eef; display:grid; place-items:center; font-weight:800; margin-bottom:10px; }
+  .avatar-big img{ width:100%; height:100%; object-fit:cover; }
+
+  .grid{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+  @media (max-width: 720px){ .grid{ grid-template-columns:1fr; } }
+
+  .field label{ display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+  .field input{ width:100%; background:#e9e9ec; border:none; border-radius:12px; padding:12px 14px; }
+  .field input:disabled{ opacity:.9; }
+
+  .actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
+  .btn{ padding:10px 14px; border-radius:10px; border:1px solid #e5e7eb; background:#fff; cursor:pointer; }
+  .btn:hover{border-color: #7b0086; color: #7b0086;}
+  .btn-primary{ background:#2563eb; color:#fff; border-color:#2563eb; }
+  .btn-danger{ background:#fff; color:#b91c1c; border-color:#f3d1d1; }
+</style>
+
+<div class="profile-wrap">
+  <!-- Sidebar -->
+  <aside class="side">
+    <a href="/dashboard">🏠 Dashboard</a>
+    <a href="/profile"><strong>👤 Account</strong></a>
+    <!-- (Optional) extra links:
+    <a href="/profile/security">🔐 Security</a>
+    -->
+    <hr style="border:none;border-top:1px solid #eee; margin:10px 0;">
+    <a class="danger" href="/logout">🚪 Log out</a>
+  </aside>
+
+  <!-- Main -->
+  <section class="card">
+    <div class="card-hd">
+      <h2 class="title">Account Information</h2>
+      <div>
+        <button id="editBtn" class="btn">Edit</button>
+      </div>
+    </div>
+
+    <div class="card-bd">
+      <div style="display:flex; align-items:center; gap:14px; margin-bottom:6px;">
+        <div class="avatar-big">
+          <% if (user && user.avatarUrl) { %>
+            <img src="<%= user.avatarUrl %>" alt="">
+          <% } else { %>
+            <span><%= (user?.firstName?.[0] || user?.name?.[0] || 'U').toUpperCase() %></span>
+          <% } %>
+        </div>
+        <div class="muted">
+          <div><strong><%= user?.firstName || '' %> <%= user?.lastName || '' %></strong></div>
+          <div><%= user?.role %></div>
+        </div>
+      </div>
+
+      <form id="profileForm" onsubmit="return false;">
+        <div class="grid">
+          <div class="field">
+            <label>First Name</label>
+            <input name="firstName" value="<%= user?.firstName || '' %>" disabled>
+          </div>
+          <div class="field">
+            <label>Last Name</label>
+            <input name="lastName" value="<%= user?.lastName || '' %>" disabled>
+          </div>
+
+          <div class="field">
+            <label>Email</label>
+            <input name="email" type="email" value="<%= user?.email || '' %>" disabled>
+          </div>
+          <div class="field">
+            <label>Phone</label>
+            <input name="phone" value="<%= user?.phone || '' %>" disabled>
+          </div>
+
+          <div class="field">
+            <label>Date of Birth</label>
+            <input name="dob" type="date" value="<%= user?.dob || '' %>" disabled>
+          </div>
+          <div class="field">
+            <label>Address</label>
+            <input name="address" value="<%= user?.address || '' %>" disabled>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="cancelBtn" class="btn" style="display:none;">Cancel</button>
+          <button id="saveBtn" class="btn btn-primary" style="display:none;">Save Changes</button>
+        </div>
+        <p id="msg" class="muted" style="margin-top:10px;"></p>
+      </form>
+    </div>
+  </section>
+</div>
+
+<script>
+  const form = document.getElementById('profileForm');
+  const editBtn = document.getElementById('editBtn');
+  const saveBtn = document.getElementById('saveBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const msg = document.getElementById('msg');
+
+  const fields = Array.from(form.querySelectorAll('input'));
+  const original = () => Object.fromEntries(fields.map(i => [i.name, i.value]));
+
+  let startValues = original();
+
+  function setEditing(editing){
+    fields.forEach(i => i.disabled = !editing);
+    saveBtn.style.display = editing ? 'inline-block' : 'none';
+    cancelBtn.style.display = editing ? 'inline-block' : 'none';
+    editBtn.textContent = editing ? 'Editing…' : 'Edit';
+    msg.textContent = '';
+  }
+
+  editBtn.addEventListener('click', () => setEditing(true));
+  cancelBtn.addEventListener('click', () => {
+    Object.entries(startValues).forEach(([k,v]) => form[k].value = v);
+    setEditing(false);
+  });
+
+  saveBtn.addEventListener('click', async () => {
+    const body = original();
+    saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+    try{
+      const res = await fetch('/api/profile', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        credentials:'include',
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(()=> ({}));
+      if(!res.ok){ msg.textContent = data.error || 'Update failed'; return; }
+      startValues = original();
+      msg.textContent = 'Saved ✔';
+      setEditing(false);
+    }catch(e){
+      msg.textContent = e.message || 'Network error';
+    }finally{
+      saveBtn.disabled = false; saveBtn.textContent = 'Save Changes';
+    }
+  });
+
+  // Start read-only
+  setEditing(false);
+</script>
