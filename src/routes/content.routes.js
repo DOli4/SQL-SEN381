@@ -27,49 +27,6 @@ const upload = multer({
   }
 });
 
-// DELETE /api/content/:id
-router.delete('/:id', requireAuth, async (req, res) => {
-  const contentId = Number(req.params.id);
-  if (isNaN(contentId)) {
-    return res.status(400).json({ error: 'Invalid content ID' });
-  }
-
-  const pool = await getPool();
-  
-  try {
-    // Check ownership through topic
-    const check = await pool.request()
-      .input('contentId', sql.Int, contentId)
-      .input('userId', sql.Int, req.user.id)
-      .query(`
-        SELECT c.Content_ID 
-        FROM dbo.Content c
-        JOIN dbo.Topic t ON t.Topic_ID = c.Topic_ID
-        WHERE c.Content_ID = @contentId 
-          AND t.User_ID = @userId
-          AND (c.IsDeleted = 0 OR c.IsDeleted IS NULL)
-      `);
-
-    if (check.recordset.length === 0) {
-      return res.status(404).json({ error: 'Content not found or unauthorized' });
-    }
-
-    // Soft delete the content
-    await pool.request()
-      .input('contentId', sql.Int, contentId)
-      .query(`
-        UPDATE dbo.Content
-        SET IsDeleted = 1
-        WHERE Content_ID = @contentId
-      `);
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Delete content error:', error);
-    res.status(500).json({ error: error.message || 'Failed to delete content' });
-  }
-});
-
 // POST /api/topics/:id/content  (upload)
 router.post(
   '/topics/:id/content',

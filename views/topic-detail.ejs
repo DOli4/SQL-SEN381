@@ -1,7 +1,22 @@
 <h1 class="mb-3">Topic</h1>
 <div id="topic" class="mb-4"></div>
 
+<h5 class="mt-4">Attach content</h5>
+<form id="uploadForm"
+      class="vstack gap-3"
+      action="/api/topics/<%= topicId %>/content"
+      method="post"
+      enctype="multipart/form-data">
+  <input type="hidden" name="topicId" value="<%= topicId %>">
+  <div>
+    <input class="form-control" type="file" name="file" required>
+  </div>
+  <button class="btn btn-secondary" type="submit">Upload</button>
+  <p id="uploadMsg" class="mt-2"></p>
+</form>
 
+<h5 class="mt-4">Attachments</h5>
+<ul id="files" class="list-group"></ul>
 
 <h5 class="mt-4">Replies</h5>
 <ul id="replies" class="list-group mb-3"></ul>
