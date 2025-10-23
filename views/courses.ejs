@@ -51,10 +51,14 @@
     flex-direction: column;
     gap: 10px;
   }
-  .add-card {
+.add-card {
   border:2px dashed #d1d5db !important;
   background:#fafafa;
   transition: all .25s ease;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100%;
 }
 .add-card:hover {
   background:#f9f1fb;
@@ -62,6 +66,7 @@
   transform:translateY(-3px);
   box-shadow:0 10px 26px rgba(123,0,134,.1);
 }
+
 
 
   .course-name { font-weight:700; font-size:15px; }
@@ -154,14 +159,14 @@
           </div>
         </article>
       <% }) %>
+      <!-- Add New Content card (now same size as others) -->
+      <article class="card add-card">
+        <a href="/content-upload" style="text-decoration:none; color:inherit; display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1;">
+          <div style="font-size:46px; color:#7b0086;">＋</div>
+          <div style="font-weight:700; font-size:15px; color:#7b0086; margin-top:4px;">Add New Content</div>
+          <div style="color:#6b7280; font-size:13px;">Upload course or topic materials</div>
+        </a>
+      </article>
     </div>
   <% } %>
-  <!-- Add New Content card (moved to the end) -->
-  <a href="/content-upload" class="card add-card" style="text-decoration:none; color:inherit;">
-    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%;">
-      <div style="font-size:46px; color:#7b0086;">＋</div>
-      <div style="font-weight:700; font-size:15px; color:#7b0086; margin-top:4px;">Add New Content</div>
-      <div style="color:#6b7280; font-size:13px;">Upload course or topic materials</div>
-    </div>
-  </a>
 </div>
