@@ -20,3 +20,80 @@ body { font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue"
 .form-narrow .form-control { padding: .6rem .8rem; }
 
 .empty { color: #6c757d; text-align:center; padding: 2rem 0; }
+
+/* File attachment styles */
+.file-attachments {
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #f8f9fa;
+}
+
+.upload-icon {
+  font-size: 32px;
+  color: #6c757d;
+  margin-bottom: 8px;
+}
+
+.file-attachments:hover {
+  border-color: var(--brand);
+  background-color: #e9f5ff;
+}
+
+.file-attachments:hover {
+  border-color: var(--brand);
+  background-color: #f0f7ff;
+}
+
+.file-attachments label {
+  display: block;
+  text-align: center;
+  cursor: pointer;
+}
+
+.file-attachments input[type="file"] {
+  width: 100%;
+  cursor: pointer;
+}
+
+.attached-files {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  background-color: white;
+}
+
+.attached-files .file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  margin: 4px 0;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.attached-files .file-item:hover {
+  background-color: #e9ecef;
+}
+
+.file-item .file-name {
+  flex-grow: 1;
+  margin-right: 10px;
+}
+
+.file-item .remove-file {
+  color: #dc3545;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.file-item .remove-file:hover {
+  background-color: #fde8e8;
+}

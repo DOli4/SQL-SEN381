@@ -101,17 +101,16 @@ CREATE TABLE dbo.Reply
 GO
 
 /* ------------------------ Content ------------------------ */
-CREATE TABLE dbo.Content
-(
-    Content_ID  INT IDENTITY(1,1) PRIMARY KEY,
-    Reply_ID    INT NULL,
-    Topic_ID    INT NULL,
-    [Path]      VARCHAR(300) NOT NULL,
-    Created_At  DATETIME2    NOT NULL CONSTRAINT DF_Content_Created DEFAULT (SYSUTCDATETIME()),
-    CONSTRAINT FK_Content_Reply FOREIGN KEY (Reply_ID) REFERENCES dbo.Reply(Reply_ID) ON DELETE CASCADE,
-    CONSTRAINT FK_Content_Topic FOREIGN KEY (Topic_ID) REFERENCES dbo.Topic(Topic_ID) ON DELETE CASCADE,
-    CONSTRAINT CK_Content_AtLeastOneRef CHECK (Reply_ID IS NOT NULL OR Topic_ID IS NOT NULL)
-);
+CREATE TABLE dbo.Content (
+    Content_ID INT IDENTITY(1,1) PRIMARY KEY,
+    Topic_ID INT NOT NULL,
+    FileName NVARCHAR(255) NOT NULL,
+    FileData VARBINARY(MAX) NOT NULL,
+    FileSize INT NOT NULL,
+    ContentType NVARCHAR(100) NOT NULL,
+    Created_At DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (Topic_ID) REFERENCES dbo.Topic(Topic_ID)
+)
 GO
 
 /* ---------------------- UserModule ----------------------- */

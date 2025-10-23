@@ -10,6 +10,24 @@ const app = express();
 // Load .env early
 dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
 
+// Initialize database connection
+let dbInitialized = false;
+getPool().then(() => {
+  dbInitialized = true;
+  console.log('✅ Database connection initialized');
+}).catch(err => {
+  console.error('❌ Failed to initialize database connection:', err);
+  // Don't exit - let the app start in degraded mode
+});
+
+// Add database health check middleware
+app.use((req, res, next) => {
+  if (!dbInitialized && req.path !== '/health' && !req.path.startsWith('/public/')) {
+    return res.status(503).send('Database initialization in progress. Please try again in a moment.');
+  }
+  next();
+});
+
 // ✅ Parsers FIRST (so req.body works for ALL routes)
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -33,6 +51,7 @@ import diagRoutes from './diag.js';
 
 // API routers
 import authRoutes from './routes/auth.routes.js';
+import pagesRoutes from './routes/pages.routes.js';
 import topicsRoutes from './routes/topics.routes.js';
 import studentsRoutes from './routes/students.routes.js';
 import tutorsRoutes from './routes/tutors.routes.js';
@@ -84,6 +103,17 @@ app.get('/db-test', async (req, res) => {
   }
 });
 
+// API routes
+app.use('/api/topics', topicsRoutes);
+app.use('/api/content', contentRoutes);
+
+// Global error handler - MUST be after all routes
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    error: err instanceof Error ? err.message : 'An unexpected error occurred'
+  });
+});
 
 // Pages
 app.use('/', crudRoutes);
@@ -125,6 +155,9 @@ app.get('/forum', (req, res) => res.render('forum'));
 app.get('/forum/new', requireAuth, (req, res) => res.render('topic-new'));
 app.get('/forum/:id', requireAuth, (req, res) => res.render('topic-detail', { topicId: Number(req.params.id) }));
 app.get('/forum/:id/edit', requireAuth, (req, res) => res.render('topic-edit', { topicId: Number(req.params.id) }));
+app.get('/topics', (req, res) => res.render('topics'));
+app.get('/topics/create', requireRole('Student'), (req, res) => res.render('topic-create'));
+// Removed old forum routes - now handled by pages.routes.js
 
 // ✅ API (mounted once each)
 // LIST: /courses
@@ -359,6 +392,10 @@ git push origin main</code></pre>
 
 
 // API (each mounted ONCE)
+// Pages
+app.use('/', pagesRoutes);
+
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/topics', topicsRoutes);
 app.use('/api/students', studentsRoutes);
@@ -370,7 +407,7 @@ app.use('/api', contentRoutes);
 app.use('/api', subsRouter);
 // Gemini chatbot API
 app.use('/api/gemini', geminiRoute);
-app.use('/api', contentRoutes); // <- gives /api/topics/:id/content and /api/content/:cid/*
+// Anonymous routes last
 app.use('/', anonRoutes);
 
 

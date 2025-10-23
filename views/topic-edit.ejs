@@ -13,6 +13,18 @@
     <label class="form-label">Content</label>
     <textarea class="form-control" name="description" rows="5"></textarea>
   </div>
+
+  <div class="mb-3">
+    <div class="file-attachments form-control" onclick="document.getElementById('fileInput').click()">
+      <input type="file" id="fileInput" name="files" multiple class="d-none" onchange="handleFiles(event)" />
+      <div class="upload-icon">+</div>
+      <div>Click to add files</div>
+    </div>
+    <div id="attachedFiles" class="attached-files mt-2" style="display: none;">
+      <div class="files-list"></div>
+    </div>
+  </div>
+
   <button class="btn btn-primary" type="submit">Save</button>
   <a class="btn btn-outline-secondary" href="/forum/<%= topicId %>">Cancel</a>
   <p id="msg" class="mt-2"></p>

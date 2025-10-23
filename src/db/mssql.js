@@ -1,9 +1,9 @@
 import 'dotenv/config';
 import sql from 'mssql/msnodesqlv8.js';
 
-const server   = process.env.SQL_SERVER || 'ULI';
-const instance = process.env.SQL_INSTANCE ? '\\' + process.env.SQL_INSTANCE : '';
-const db       = process.env.SQL_DB || 'CampusLearn';
+// --- Direct LocalDB pipe name ---
+const server = 'np:\\\\.\\pipe\\LOCALDB#3BCC5D31\\tsql\\query';
+const db = process.env.SQL_DB || 'CampusLearn';
 
 /*
   Driver name: pick one you actually have installed.
@@ -13,15 +13,19 @@ const db       = process.env.SQL_DB || 'CampusLearn';
 const DRIVER = '{ODBC Driver 17 for SQL Server}';
 
 const connStr =
-  `Server=${server}${instance};` +
+  `Server=${server};` +
   `Database=${db};` +
   `Trusted_Connection=Yes;` +
   `TrustServerCertificate=Yes;` +
   `Driver=${DRIVER};`;
 
-console.log('[DB cfg]', { server: server+instance, db, auth: 'Windows', driver: DRIVER });
+console.log('[DB cfg]', { server, db, driver: DRIVER });
 
-let pool;
+let pool = null;
+let connectionAttempts = 0;
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 5000; // 5 seconds
+
 export async function getPool() {
   if (!pool) {
     try {
@@ -32,6 +36,14 @@ export async function getPool() {
       throw e;
     }
   }
-  return pool;
 }
+
+// Handle process termination
+process.on('exit', () => {
+  if (pool) {
+    console.log('Closing database pool...');
+    pool.close();
+  }
+});
+
 export { sql };
